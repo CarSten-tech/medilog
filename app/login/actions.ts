@@ -15,7 +15,7 @@ export async function login(formData: FormData) {
   const { error } = await supabase.auth.signInWithPassword(data)
 
   if (error) {
-    redirect('/login?error=Could not authenticate user')
+    redirect('/?error=Could not authenticate user')
   }
 
   revalidatePath('/', 'layout')
@@ -33,7 +33,7 @@ export async function signup(formData: FormData) {
   const { error } = await supabase.auth.signUp(data)
 
   if (error) {
-    redirect('/login?error=Could not create user')
+    redirect('/?error=Could not create user')
   }
 
   revalidatePath('/', 'layout')
@@ -43,7 +43,7 @@ export async function signup(formData: FormData) {
 export async function signOut() {
   const supabase = await createClient()
   await supabase.auth.signOut()
-  redirect('/login')
+  redirect('/')
 }
 
 import { headers } from 'next/headers'
@@ -63,7 +63,7 @@ export async function signInWithGoogle() {
   })
 
   if (error) {
-    redirect('/login?error=Could not authenticate with Google')
+    redirect('/?error=Could not authenticate with Google')
   }
 
   if (data.url) {
