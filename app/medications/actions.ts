@@ -114,3 +114,37 @@ export async function deleteMedication(id: string) {
   revalidatePath('/dashboard')
   return { success: true }
 }
+
+export async function deductWeeklyRation() {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+
+  if (!user) {
+    throw new Error('Unauthorized')
+  }
+
+  const { data: medications, error: fetchError } = await supabase
+    .from('medications')
+    .select('id, current_stock, daily_dosage')
+    .eq('user_id', user.id)
+
+  if (fetchError || !medications) {
+    console.error('Error fetching medications:', fetchError)
+    return { error: 'Failed to update medications' }
+  }
+
+  const updates = medications.map(med => {
+    const weeklyDosage = (med.daily_dosage || 0) * 7
+    const newStock = Math.max(0, med.current_stock - weeklyDosage)
+    
+    return supabase
+      .from('medications')
+      .update({ current_stock: newStock })
+      .eq('id', med.id)
+  })
+
+  await Promise.all(updates)
+
+  revalidatePath('/dashboard')
+  return { success: true }
+}

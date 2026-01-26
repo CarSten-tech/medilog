@@ -1,6 +1,7 @@
 import { createClient } from '@/utils/supabase/server'
 import { SortableMedicationGrid } from "@/components/dashboard/sortable-medication-grid"
 import type { MedicationStatus } from "@/components/dashboard/medication-card"
+import { WeeklyRefillButton } from "@/components/dashboard/weekly-refill-button"
 
 export default async function DashboardPage() {
   const supabase = await createClient()
@@ -58,9 +59,12 @@ export default async function DashboardPage() {
 
   return (
     <div className="p-8 max-w-7xl mx-auto">
-      <div className="flex justify-between items-center mb-8">
-        <h1 className="text-3xl font-bold tracking-tight text-slate-900">Meine Medikamente</h1>
-        <p className="text-slate-500 font-medium">{today}</p>
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
+        <div>
+           <h1 className="text-3xl font-bold tracking-tight text-slate-900">Meine Medikamente</h1>
+           <p className="text-slate-500 font-medium">{today}</p>
+        </div>
+        <WeeklyRefillButton />
       </div>
 
       <SortableMedicationGrid medications={processedMedications} />
