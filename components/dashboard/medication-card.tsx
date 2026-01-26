@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/dialog"
 import { EditMedicationForm } from "@/components/medications/edit-medication-form"
 
-export type MedicationStatus = 'ok' | 'warning' | 'critical'
+export type MedicationStatus = 'ok' | 'warning' | 'critical' | 'expired'
 
 export interface MedicationCardProps {
   id: string
@@ -50,6 +50,7 @@ export function MedicationCard({
   let iconBg = "bg-emerald-50"
   let progressColor = "bg-emerald-500"
   let daysLeftColor = "text-emerald-600"
+  let statusText = `${daysLeft} Tage verbleibend`
 
   if (status === 'warning') {
     StatusIcon = AlertTriangle
@@ -63,6 +64,14 @@ export function MedicationCard({
     iconBg = "bg-rose-50"
     progressColor = "bg-rose-500"
     daysLeftColor = "text-rose-600"
+    statusText = "Nachfüllen erforderlich"
+  } else if (status === 'expired') {
+    StatusIcon = AlertCircle
+    iconColor = "text-red-700"
+    iconBg = "bg-red-100"
+    progressColor = "bg-red-700"
+    daysLeftColor = "text-red-700 font-bold"
+    statusText = "ABGELAUFEN"
   }
 
   return (
@@ -86,7 +95,9 @@ export function MedicationCard({
             <div className="flex justify-between text-sm font-medium">
               <span className="text-slate-600">Vorrat</span>
               <span className={daysLeftColor}>
-                  {status === 'critical' ? 'Nachfüllen erforderlich' : `${daysLeft} Tage verbleibend`}
+              <span className={daysLeftColor}>
+                  {statusText}
+              </span>
               </span>
             </div>
             <Progress value={stockLevel} className="h-2" indicatorClassName={progressColor} />

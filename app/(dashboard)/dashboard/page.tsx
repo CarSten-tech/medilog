@@ -33,10 +33,31 @@ export default async function DashboardPage() {
 
     // Determine Status
     let status: MedicationStatus = 'ok';
-    if (daysLeft < 7) {
-      status = 'critical';
-    } else if (daysLeft < 20) {
-      status = 'warning';
+    let isExpired = false;
+    let isExpiringSoon = false;
+
+    // Check expiry
+    if (med.expiry_date) {
+      const expiry = new Date(med.expiry_date);
+      const now = new Date();
+      const oneWeekFromNow = new Date();
+      oneWeekFromNow.setDate(now.getDate() + 7);
+
+      if (expiry < now) {
+        status = 'expired';
+        isExpired = true;
+      } else if (expiry < oneWeekFromNow) {
+        status = 'warning'; // Override warning for expiry
+        isExpiringSoon = true;
+      }
+    }
+
+    if (!isExpired && status !== 'warning') {
+        if (daysLeft < 7) {
+            status = 'critical';
+        } else if (daysLeft < 20) {
+            status = 'warning';
+        }
     }
 
     // Calculate stock level as percentage (for progress bar, capped at 100)
