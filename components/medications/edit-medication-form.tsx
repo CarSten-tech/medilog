@@ -224,9 +224,9 @@ export function EditMedicationForm({ medicationId, initialData, onSuccess }: Edi
 
             {/* Daily Dosage with Frequency Toggle */}
             <div className="flex flex-col gap-2 relative pb-6 h-full">
-                <div className="flex items-center justify-between">
-                    <Label htmlFor="dosage" className="mb-2">{frequencyType === 'daily' ? 'Tagesdosis' : 'Wochendosis'}</Label>
-                    <div className="flex bg-slate-100 rounded-lg p-0.5 h-7 mb-2">
+                <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
+                    <Label htmlFor="dosage">{frequencyType === 'daily' ? 'Tagesdosis' : 'Wochendosis'}</Label>
+                    <div className="flex bg-slate-100 rounded-lg p-0.5 h-7">
                         <button
                             type="button"
                             onClick={() => setFrequencyType('daily')}

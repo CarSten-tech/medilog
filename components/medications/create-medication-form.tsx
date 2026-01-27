@@ -127,7 +127,7 @@ export function CreateMedicationForm({ onSuccess }: CreateMedicationFormProps) {
 
             {/* Daily Dosage with Frequency Toggle */}
             <div className="flex flex-col gap-2 relative pb-6">
-                <div className="flex items-center justify-between">
+                <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
                     <Label htmlFor="dosage">{frequencyType === 'daily' ? 'Tagesdosis' : 'Wochendosis'}</Label>
                     <div className="flex bg-slate-100 rounded-lg p-0.5 h-7">
                         <button
