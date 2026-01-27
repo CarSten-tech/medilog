@@ -15,7 +15,11 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 
-export function WeeklyRefillButton() {
+interface WeeklyRefillButtonProps {
+  targetUserId?: string
+}
+
+export function WeeklyRefillButton({ targetUserId }: WeeklyRefillButtonProps) {
   const [isLoading, setIsLoading] = useState(false)
   const [isDone, setIsDone] = useState(false)
   const [showConfirm, setShowConfirm] = useState(false)
@@ -23,7 +27,7 @@ export function WeeklyRefillButton() {
   const handleDeduct = async () => {
     setIsLoading(true)
     try {
-      await deductWeeklyRation()
+      await deductWeeklyRation(targetUserId)
       setIsDone(true)
       setTimeout(() => setIsDone(false), 3000)
     } catch (error) {

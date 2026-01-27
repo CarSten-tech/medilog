@@ -7,11 +7,14 @@ import { signOut } from "@/app/login/actions"
 import type { User } from "@supabase/supabase-js"
 import { PushNotificationManager } from "@/components/dashboard/push-notification-manager"
 
+import { PatientSwitcher } from "@/components/dashboard/patient-switcher"
+
 interface NavbarProps {
   user: User
+  patients?: any[] // Using any to avoid complex type import for now, or define minimal interface
 }
 
-export function Navbar({ user }: NavbarProps) {
+export function Navbar({ user, patients = [] }: NavbarProps) {
   return (
     <nav className="border-b bg-white sticky top-0 z-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -21,6 +24,11 @@ export function Navbar({ user }: NavbarProps) {
               <Pill className="h-8 w-8 text-teal-600 mr-2" />
               <span className="font-bold text-xl tracking-tight text-slate-900">MediLog</span>
             </Link>
+            {patients.length > 0 && (
+                <div className="flex items-center ml-4 border-l pl-4">
+                    <PatientSwitcher patients={patients} currentUser={user} />
+                </div>
+            )}
           </div>
           <div className="flex items-center space-x-4">
              <span>

@@ -6,7 +6,7 @@ import { redirect } from 'next/navigation'
 import { z } from 'zod'
 import { MedicationFormSchema, type MedicationFormData } from './schema'
 
-export async function createMedication(data: MedicationFormData) {
+export async function createMedication(data: MedicationFormData, targetUserId?: string) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
 
@@ -18,7 +18,7 @@ export async function createMedication(data: MedicationFormData) {
   const { error: medError } = await supabase
     .from('medications')
     .insert({
-      user_id: user.id,
+      user_id: targetUserId || user.id,
       name: data.name,
       current_stock: data.current_stock,
       daily_dosage: data.daily_dosage,
@@ -87,7 +87,6 @@ export async function updateMedication(id: string, data: MedicationFormData) {
       refill_threshold: data.refill_threshold,
     })
     .eq('id', id)
-    .eq('user_id', user.id) // Security: Ensure user owns this medication
 
   if (error) {
     console.error('Error updating medication:', error)
@@ -133,7 +132,6 @@ export async function deleteMedication(id: string) {
     .from('medications')
     .delete()
     .eq('id', id)
-    .eq('user_id', user.id) // Security: Ensure user owns this medication
 
   if (error) {
     console.error('Error deleting medication:', error)
@@ -144,7 +142,7 @@ export async function deleteMedication(id: string) {
   return { success: true }
 }
 
-export async function deductWeeklyRation() {
+export async function deductWeeklyRation(targetUserId?: string) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
 
@@ -152,10 +150,12 @@ export async function deductWeeklyRation() {
     throw new Error('Unauthorized')
   }
 
+  const target = targetUserId || user.id
+
   const { data: medications, error: fetchError } = await supabase
     .from('medications')
     .select('id, current_stock, daily_dosage')
-    .eq('user_id', user.id)
+    .eq('user_id', target)
 
   if (fetchError || !medications) {
     console.error('Error fetching medications:', fetchError)
@@ -179,7 +179,7 @@ export async function deductWeeklyRation() {
       const { data: freshMeds } = await supabase
         .from('medications')
         .select('name, current_stock, daily_dosage')
-        .eq('user_id', user.id)
+        .eq('user_id', target)
 
       if (freshMeds && freshMeds.length > 0) {
           const inventoryReport: string[] = []
@@ -192,7 +192,7 @@ export async function deductWeeklyRation() {
           if (inventoryReport.length > 0) {
               const { sendNotificationToUser } = await import('@/app/actions/push')
               await sendNotificationToUser(
-                  user.id, 
+                  target, 
                   'Wochenration gestellt! ✅',
                   `Hier ist dein aktueller Vorrat:\n\n${inventoryReport.join('\n')}`
               )

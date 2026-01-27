@@ -14,9 +14,23 @@ export default async function DashboardLayout({
     redirect('/login')
   }
 
+  // Fetch care network
+  const { getCareNetwork } = await import('@/app/actions/caregiver')
+  const { myPatients } = await getCareNetwork()
+
+  // Map to simpler structure if needed, or pass as is.
+  // PatientSwitcher expects: { id: string, first_name: string | null, last_name: string | null, email: string | null }
+  // The query returns { patient: { ... } }. Need to flatten.
+  const patients = myPatients.map(rel => ({
+      id: rel.patient.id,
+      first_name: rel.patient.first_name,
+      last_name: rel.patient.last_name,
+      email: rel.patient.email
+  }))
+
   return (
     <div className="min-h-screen bg-slate-50">
-      <Navbar user={user} />
+      <Navbar user={user} patients={patients} />
       <main>
         {children}
       </main>

@@ -3,18 +3,54 @@ import { SortableMedicationGrid } from "@/components/dashboard/sortable-medicati
 import type { MedicationStatus } from "@/components/dashboard/medication-card"
 import { WeeklyRefillButton } from "@/components/dashboard/weekly-refill-button"
 
-export default async function DashboardPage() {
+// ... imports ...
+
+interface DashboardProps {
+    searchParams: { patientId?: string }
+}
+
+export default async function DashboardPage({ searchParams }: DashboardProps) {
   const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+
+  if (!user) return null // Should be handled by layout but just in case
+
+  const { patientId } = await searchParams || {}
+  
+  let targetUserId = user.id
+  let isCaregiverView = false
+  let patientName = "Meine Medikamente"
+
+  // Check valid caregiver relationship if patientId is requested
+  if (patientId && patientId !== user.id) {
+    const { data: rel } = await supabase
+        .from('care_relationships')
+        .select('patient:profiles!care_relationships_patient_id_fkey(first_name, last_name)')
+        .eq('caregiver_id', user.id)
+        .eq('patient_id', patientId)
+        .eq('status', 'active')
+        .single()
+    
+    if (rel) {
+        targetUserId = patientId
+        isCaregiverView = true
+        // @ts-ignore
+        const pName = rel.patient?.first_name || 'Patient'
+        patientName = `${pName}s Medikamente`
+    }
+  }
+
   const today = new Date().toLocaleDateString('de-DE', {
     weekday: 'long',
     month: 'short',
     day: 'numeric'
   })
 
-  // Fetch medications ordered by display_order
+  // Fetch medications for target user
   const { data: medications, error } = await supabase
     .from('medications')
     .select('*')
+    .eq('user_id', targetUserId)
     .order('display_order', { ascending: true })
 
   if (error) {
@@ -83,10 +119,10 @@ export default async function DashboardPage() {
     <div className="p-8 max-w-7xl mx-auto">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
         <div>
-           <h1 className="text-3xl font-bold tracking-tight text-slate-900">Meine Medikamente</h1>
+           <h1 className="text-3xl font-bold tracking-tight text-slate-900">{patientName}</h1>
            <p className="text-slate-500 font-medium">{today}</p>
         </div>
-        <WeeklyRefillButton />
+        <WeeklyRefillButton targetUserId={isCaregiverView ? targetUserId : undefined} />
       </div>
 
       <SortableMedicationGrid medications={processedMedications} />
