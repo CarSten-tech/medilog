@@ -57,7 +57,7 @@ export function CreateMedicationForm({ onSuccess }: CreateMedicationFormProps) {
             {form.formState.errors.name && <p className="text-sm text-red-500">{form.formState.errors.name.message}</p>}
         </div>
 
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             {/* Current Stock */}
             <div className="space-y-2">
                 <Label htmlFor="stock">Aktueller Vorrat (Stück)</Label>
@@ -81,6 +81,19 @@ export function CreateMedicationForm({ onSuccess }: CreateMedicationFormProps) {
                 className="h-11"
                 />
                 {form.formState.errors.daily_dosage && <p className="text-sm text-red-500">{form.formState.errors.daily_dosage.message}</p>}
+            </div>
+
+            {/* Package Size */}
+            <div className="space-y-2">
+                <Label htmlFor="package_size">Packungsgröße (Optional)</Label>
+                <Input 
+                id="package_size" 
+                type="number" 
+                placeholder="z.B. 20"
+                {...form.register('package_size', { valueAsNumber: true })} 
+                className="h-11"
+                />
+                {form.formState.errors.package_size && <p className="text-sm text-red-500">{form.formState.errors.package_size.message}</p>}
             </div>
         </div>
 

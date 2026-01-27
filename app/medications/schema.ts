@@ -7,6 +7,7 @@ export const MedicationFormSchema = z.object({
   daily_dosage: z.number().min(1, 'Daily dosage must be at least 1'),
   frequency_note: z.string().optional(),
   expiry_date: z.date().optional(),
+  package_size: z.number().min(1, "Package size must be at least 1").optional(),
   // Hidden defaults
   refill_threshold: z.number(),
 })

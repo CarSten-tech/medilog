@@ -55,6 +55,7 @@ export async function updateMedication(id: string, data: MedicationFormData) {
       daily_dosage: data.daily_dosage,
       frequency_note: data.frequency_note,
       expiry_date: data.expiry_date ? data.expiry_date.toISOString() : null,
+      package_size: data.package_size,
       refill_threshold: data.refill_threshold,
     })
     .eq('id', id)

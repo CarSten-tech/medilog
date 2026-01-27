@@ -22,6 +22,7 @@ export interface EditMedicationFormProps {
     daily_dosage: number
     frequency_note?: string | null
     expiry_date?: string | null
+    package_size?: number | null
     refill_threshold: number
   }
   onSuccess: () => void
@@ -39,6 +40,7 @@ export function EditMedicationForm({ medicationId, initialData, onSuccess }: Edi
       daily_dosage: initialData.daily_dosage ?? 1,
       frequency_note: initialData.frequency_note ?? '',
       expiry_date: initialData.expiry_date ? new Date(initialData.expiry_date) : undefined,
+      package_size: initialData.package_size ?? undefined,
       refill_threshold: initialData.refill_threshold ?? 10,
     }
   })
@@ -83,16 +85,32 @@ export function EditMedicationForm({ medicationId, initialData, onSuccess }: Edi
             {form.formState.errors.name && <p className="text-sm text-red-500">{form.formState.errors.name.message}</p>}
         </div>
 
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             {/* Current Stock */}
             <div className="space-y-2">
                 <Label htmlFor="stock">Aktueller Vorrat (Stück)</Label>
-                <Input 
-                id="stock" 
-                type="number" 
-                {...form.register('current_stock', { valueAsNumber: true })} 
-                className="h-11"
-                />
+                <div className="flex gap-2">
+                    <Input 
+                        id="stock" 
+                        type="number" 
+                        {...form.register('current_stock', { valueAsNumber: true })} 
+                        className="h-11"
+                    />
+                    {form.watch('package_size') && form.watch('package_size')! > 0 && (
+                        <Button 
+                            type="button" 
+                            variant="outline" 
+                            className="h-11 px-3 border-teal-200 text-teal-700 bg-teal-50 hover:bg-teal-100 cursor-pointer"
+                            onClick={() => {
+                                const current = form.getValues('current_stock') || 0
+                                const size = form.getValues('package_size')!
+                                form.setValue('current_stock', current + size)
+                            }}
+                        >
+                            +{form.watch('package_size')}
+                        </Button>
+                    )}
+                </div>
                 {form.formState.errors.current_stock && <p className="text-sm text-red-500">{form.formState.errors.current_stock.message}</p>}
             </div>
 
@@ -107,6 +125,19 @@ export function EditMedicationForm({ medicationId, initialData, onSuccess }: Edi
                 className="h-11"
                 />
                 {form.formState.errors.daily_dosage && <p className="text-sm text-red-500">{form.formState.errors.daily_dosage.message}</p>}
+            </div>
+
+            {/* Package Size */}
+            <div className="space-y-2">
+                <Label htmlFor="package_size">Packungsgröße (Optional)</Label>
+                <Input 
+                id="package_size" 
+                type="number" 
+                placeholder="z.B. 20"
+                {...form.register('package_size', { valueAsNumber: true })} 
+                className="h-11"
+                />
+                {form.formState.errors.package_size && <p className="text-sm text-red-500">{form.formState.errors.package_size.message}</p>}
             </div>
         </div>
 

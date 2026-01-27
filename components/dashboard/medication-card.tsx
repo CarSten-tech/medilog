@@ -27,6 +27,7 @@ export interface MedicationCardProps {
   daily_dosage: number
   frequency_note?: string | null
   expiry_date?: string | null
+  package_size?: number | null
   refill_threshold: number
 }
 
@@ -41,6 +42,7 @@ export function MedicationCard({
   daily_dosage,
   frequency_note,
   expiry_date,
+  package_size,
   refill_threshold
 }: MedicationCardProps) {
   const [open, setOpen] = useState(false)
@@ -77,7 +79,7 @@ export function MedicationCard({
   return (
     <>
       <Card 
-        className="border shadow-sm hover:shadow-md transition-shadow cursor-pointer"
+        className="border shadow-sm hover:shadow-md transition-all cursor-pointer active:scale-[0.98] active:brightness-95"
         onClick={() => setOpen(true)}
       >
         <CardContent className="p-6">
@@ -118,6 +120,7 @@ export function MedicationCard({
               daily_dosage,
               frequency_note,
               expiry_date,
+              package_size,
               refill_threshold,
             }}
             onSuccess={() => setOpen(false)} 

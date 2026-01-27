@@ -74,6 +74,7 @@ export default async function DashboardPage() {
       daily_dosage: med.daily_dosage,
       frequency_note: med.frequency_note,
       expiry_date: med.expiry_date,
+      package_size: med.package_size,
       refill_threshold: med.refill_threshold,
     };
   });
