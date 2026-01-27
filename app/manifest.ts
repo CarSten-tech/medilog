@@ -7,8 +7,8 @@ export default function manifest(): MetadataRoute.Manifest {
     description: 'Dein persönlicher Begleiter für eine sichere und einfache Medikationsplanung.',
     start_url: '/',
     display: 'standalone',
-    background_color: '#f0fdfa', // teal-50
-    theme_color: '#0d9488', // teal-600
+    background_color: '#ffffff',
+    theme_color: '#ffffff',
     icons: [
       {
         src: '/icon.png',
