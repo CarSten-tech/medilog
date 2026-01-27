@@ -1,6 +1,6 @@
 'use client'
 
-import { Pill, LogOut } from "lucide-react"
+import { Pill, LogOut, Users } from "lucide-react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { signOut } from "@/app/login/actions"
