@@ -1,15 +1,19 @@
-import { z } from 'zod'
-
 export const MedicationFormSchema = z.object({
-  // Basic
-  name: z.string().min(1, 'Name is required'),
-  current_stock: z.number().min(0, 'Stock cannot be negative'),
-  daily_dosage: z.number().min(1, 'Daily dosage must be at least 1'),
+  name: z.string().min(2, {
+    message: "Name muss mindestens 2 Zeichen lang sein.",
+  }),
+  current_stock: z.number().min(0, {
+    message: "Vorrat darf nicht negativ sein.",
+  }),
+  daily_dosage: z.number().min(0.1, {
+    message: "Tagesdosis muss mindestens 0.1 sein.",
+  }),
+  package_size: z.number().min(1, {
+    message: "Packungsgröße muss mindestens 1 sein.",
+  }).optional().nullable(),
+  refill_threshold: z.number().min(1, {
+    message: "Warnschwelle muss mindestens 1 sein.",
+  }),
   frequency_note: z.string().optional(),
-  expiry_date: z.date().optional(),
-  package_size: z.number().min(1, "Package size must be at least 1").optional(),
-  // Hidden defaults
-  refill_threshold: z.number(),
+  expiry_date: z.date().optional().nullable(),
 })
-
-export type MedicationFormData = z.infer<typeof MedicationFormSchema>

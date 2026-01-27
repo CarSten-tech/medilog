@@ -36,8 +36,6 @@ export function CreateMedicationForm({ onSuccess }: CreateMedicationFormProps) {
   const form = useForm<MedicationFormData>({
     resolver: zodResolver(MedicationFormSchema),
     defaultValues: {
-      daily_dosage: 1,
-      current_stock: 0,
       refill_threshold: 10,
     }
   })
@@ -97,43 +95,51 @@ export function CreateMedicationForm({ onSuccess }: CreateMedicationFormProps) {
             {form.formState.errors.name && <p className="text-sm text-red-500">{form.formState.errors.name.message}</p>}
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
             {/* Current Stock */}
-            <div className="flex flex-col gap-2 sm:h-full">
+            <div className="flex flex-col gap-2 relative pb-6">
                 <Label htmlFor="stock">Aktueller Vorrat (Stück)</Label>
                 <Input 
                 id="stock" 
                 type="number" 
+                placeholder="0"
                 {...form.register('current_stock', { valueAsNumber: true })} 
-                className="h-11 mt-auto"
+                className="h-11 mt-auto placeholder:text-slate-300"
                 />
-                {form.formState.errors.current_stock && <p className="text-sm text-red-500">{form.formState.errors.current_stock.message}</p>}
+                {form.formState.errors.current_stock && (
+                    <p className="text-xs text-red-500 absolute bottom-0 left-0">{form.formState.errors.current_stock.message}</p>
+                )}
             </div>
 
             {/* Daily Dosage */}
-            <div className="flex flex-col gap-2 sm:h-full">
+            <div className="flex flex-col gap-2 relative pb-6">
                 <Label htmlFor="dosage">Tagesdosis (Gesamt)</Label>
                 <Input 
                 id="dosage" 
                 type="number"
                 step="0.5" 
+                placeholder="0"
                 {...form.register('daily_dosage', { valueAsNumber: true })} 
-                className="h-11 mt-auto"
+                className="h-11 mt-auto placeholder:text-slate-300"
                 />
-                {form.formState.errors.daily_dosage && <p className="text-sm text-red-500">{form.formState.errors.daily_dosage.message}</p>}
+                {form.formState.errors.daily_dosage && (
+                    <p className="text-xs text-red-500 absolute bottom-0 left-0">{form.formState.errors.daily_dosage.message}</p>
+                )}
             </div>
 
             {/* Package Size */}
-            <div className="flex flex-col gap-2 sm:h-full">
+            <div className="flex flex-col gap-2 relative pb-6">
                 <Label htmlFor="package_size">Packungsgröße (Optional)</Label>
                 <Input 
                 id="package_size" 
                 type="number" 
-                placeholder="z.B. 20 (ganze Packung)"
+                placeholder="z.B. 20"
                 {...form.register('package_size', { valueAsNumber: true })} 
-                className="h-11 mt-auto"
+                className="h-11 mt-auto placeholder:text-slate-300"
                 />
-                {form.formState.errors.package_size && <p className="text-sm text-red-500">{form.formState.errors.package_size.message}</p>}
+                {form.formState.errors.package_size && (
+                    <p className="text-xs text-red-500 absolute bottom-0 left-0">{form.formState.errors.package_size.message}</p>
+                )}
             </div>
         </div>
 
@@ -148,7 +154,7 @@ export function CreateMedicationForm({ onSuccess }: CreateMedicationFormProps) {
                       type="number" 
                       step="0.5" 
                       placeholder="0"
-                      className="h-10 text-center bg-white"
+                      className="h-10 text-center bg-white placeholder:text-slate-300"
                       value={frequency[time === 'Morgens' ? 'morning' : time === 'Mittags' ? 'noon' : 'evening'] as string}
                       onChange={(e) => {
                          const val = e.target.value
