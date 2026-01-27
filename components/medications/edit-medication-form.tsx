@@ -28,6 +28,7 @@ export interface EditMedicationFormProps {
   onSuccess: () => void
 }
 
+export function EditMedicationForm({ medicationId, initialData, onSuccess }: EditMedicationFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
   const [isEditingName, setIsEditingName] = useState(false)
@@ -74,7 +75,6 @@ export interface EditMedicationFormProps {
   return (
     <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 pt-4">
         {/* Name */}
-        <div className="space-y-2">
         {/* Name (Locked by default) */}
         <div className="space-y-2">
             <Label htmlFor="name">Name des Medikaments</Label>
