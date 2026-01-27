@@ -35,6 +35,7 @@ export interface EditMedicationFormProps {
     expiry_date?: string | null
     package_size?: number | null
     refill_threshold: number
+    frequency?: 'daily' | 'weekly'
   }
   onSuccess: () => void
 }
@@ -64,13 +65,15 @@ export function EditMedicationForm({ medicationId, initialData, onSuccess }: Edi
   }
 
   const [frequency, setFrequency] = useState(parseFrequency(initialData.frequency_note || ''))
+  const [frequencyType, setFrequencyType] = useState<'daily' | 'weekly'>(initialData.frequency || 'daily')
 
   const form = useForm<MedicationFormData>({
     resolver: zodResolver(MedicationFormSchema),
     defaultValues: {
       name: initialData.name,
       current_stock: initialData.current_stock,
-      daily_dosage: initialData.daily_dosage ?? 1,
+      daily_dosage: initialData.frequency === 'weekly' ? initialData.daily_dosage * 7 : (initialData.daily_dosage ?? 1),
+      frequency: initialData.frequency || 'daily',
       frequency_note: initialData.frequency_note ?? '',
       expiry_date: initialData.expiry_date ? new Date(initialData.expiry_date) : undefined,
       package_size: initialData.package_size ?? undefined,
@@ -88,17 +91,26 @@ export function EditMedicationForm({ medicationId, initialData, onSuccess }: Edi
   const handlePreSubmit = async (data: MedicationFormData) => {
     setIsSubmitting(true)
     try {
+      // Adjust data based on frequency type
+      const finalData = { ...data }
+      finalData.frequency = frequencyType
+      
+      if (frequencyType === 'weekly') {
+          // Convert weekly dose to daily rate
+          finalData.daily_dosage = data.daily_dosage / 7
+      }
+
       // Check for duplicates only if name changed
       if (data.name !== initialData.name) {
-        const exists = await checkMedicationName(data.name, medicationId)
+        const exists = await checkMedicationName(finalData.name, medicationId)
         if (exists) {
-          setPendingData(data)
+          setPendingData(finalData)
           setShowDuplicateDialog(true)
           setIsSubmitting(false)
           return
         }
       }
-      await performUpdate(data)
+      await performUpdate(finalData)
     } catch (error) {
       console.error(error)
       setIsSubmitting(false)
@@ -210,17 +222,48 @@ export function EditMedicationForm({ medicationId, initialData, onSuccess }: Edi
                 )}
             </div>
 
-            {/* Daily Dosage */}
-            <div className="flex flex-col relative pb-6 h-full">
-                <Label htmlFor="dosage" className="mb-2">Tagesdosis (Gesamt)</Label>
+            {/* Daily Dosage with Frequency Toggle */}
+            <div className="flex flex-col gap-2 relative pb-6 h-full">
+                <div className="flex items-center justify-between">
+                    <Label htmlFor="dosage" className="mb-2">{frequencyType === 'daily' ? 'Tagesdosis' : 'Wochendosis'}</Label>
+                    <div className="flex bg-slate-100 rounded-lg p-0.5 h-7 mb-2">
+                        <button
+                            type="button"
+                            onClick={() => setFrequencyType('daily')}
+                            className={cn(
+                                "px-2 text-xs rounded-md transition-all flex items-center",
+                                frequencyType === 'daily' ? "bg-white shadow-sm text-teal-700 font-medium" : "text-slate-500 hover:text-slate-700"
+                            )}
+                        >
+                            Tag
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => setFrequencyType('weekly')}
+                            className={cn(
+                                "px-2 text-xs rounded-md transition-all flex items-center",
+                                frequencyType === 'weekly' ? "bg-white shadow-sm text-teal-700 font-medium" : "text-slate-500 hover:text-slate-700"
+                            )}
+                        >
+                            Woche
+                        </button>
+                    </div>
+                </div>
                 <Input 
                 id="dosage" 
                 type="number"
-                step="0.5" 
+                step={frequencyType === 'weekly' ? "1" : "0.5"}
                 autoComplete="off"
                 {...form.register('daily_dosage', { valueAsNumber: true })} 
                 className="h-11 mt-auto"
                 />
+                
+                {frequencyType === 'weekly' && form.watch('daily_dosage') > 0 && (
+                     <p className="text-[10px] text-slate-400 absolute bottom-8 right-3 pointer-events-none">
+                        Ø {(form.watch('daily_dosage') / 7).toFixed(2)}/Tag
+                     </p>
+                )}
+
                 {form.formState.errors.daily_dosage && (
                     <p className="text-xs text-red-500 absolute bottom-0 left-0">{form.formState.errors.daily_dosage.message}</p>
                 )}
