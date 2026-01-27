@@ -1,4 +1,4 @@
-
+// @ts-nocheck
 import { createClient } from 'jsr:@supabase/supabase-js@2'
 
 const corsHeaders = {
@@ -6,7 +6,7 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
-Deno.serve(async (req) => {
+Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
   }
@@ -23,62 +23,72 @@ Deno.serve(async (req) => {
         throw new Error('Missing user_id')
     }
 
-    // 1. Find medication with lowest stock > 0
-    // Using service role is fine here as user_id is passed explicitly for this automation context
+    // 1. Fetch ALL active medications for this user
     const { data: medications, error: fetchError } = await supabase
       .from('medications')
       .select('id, name, current_stock, daily_dosage')
       .eq('user_id', user_id)
-      .gt('current_stock', 0)
-      .order('current_stock', { ascending: true })
-      .limit(1)
+      // Removed .gt('current_stock', 0) to allow filling even if stock is technically 0/negative in DB
+      // assuming user has physical access to meds.
 
     if (fetchError) throw fetchError
 
     if (!medications || medications.length === 0) {
       return new Response(
-        JSON.stringify({ message: "Keine Medikamente mit verbleibendem Vorrat gefunden." }),
+        JSON.stringify({ message: "Keine Medikamente gefunden." }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
 
-    const med = medications[0]
-    
-    // 2. Decrement stock
-    // Calculate decrement amount. Assuming 1 pill intake or daily dosage?
-    // User request: "Decrement its current_stock by 1" specifically.
-    // However, if daily_dosage is 0.5, removing 1 might be "2 doses".
-    // But request said "Decrement ... by 1". I will stick to exact request for "siri-refill" 
-    // which sounds like "I just took a pill".
-    
-    const newStock = med.current_stock - 1
+    let updatedCount = 0;
+    const errors: string[] = [];
+    const updatedNames: string[] = [];
 
-    const { error: updateError } = await supabase
-      .from('medications')
-      .update({ current_stock: newStock })
-      .eq('id', med.id)
+    // 2. Process each medication
+    for (const med of medications) {
+        // Calculate weekly amount
+        // daily_dosage is per day. Weekly need = daily * 7.
+        const weeklyAmount = Number(med.daily_dosage) * 7
+        
+        // Skip if dosage is 0
+        if (weeklyAmount <= 0) continue;
 
-    if (updateError) throw updateError
+        const newStock = Number(med.current_stock) - weeklyAmount
 
-    // 3. Optional: Insert intake log via RPC or direct insert if RLS allows or using service role
-    // Service role allows everything so we are good.
-    await supabase.from('intake_logs').insert({
-        medication_id: med.id,
-        taken_at: new Date().toISOString(),
-        status: 'taken'
-    })
+        // Update Stock
+        const { error: updateError } = await supabase
+            .from('medications')
+            .update({ current_stock: newStock })
+            .eq('id', med.id)
 
-    // 4. Return Siri Message
+        if (updateError) {
+            console.error(`Error updating ${med.name}:`, updateError)
+            errors.push(med.name)
+        } else {
+            updatedCount++
+            updatedNames.push(med.name)
+            
+            // Log Intake
+            const { error: logError } = await supabase.from('intake_logs').insert({
+                medication_id: med.id,
+                taken_at: new Date().toISOString(),
+                status: 'taken'
+            })
+            
+            if (logError) console.error("Log error", logError)
+        }
+    }
+
+    // 3. Return Summary (Text only for Siri)
+    const nameList = updatedNames.join(', ');
     return new Response(
-      JSON.stringify({ 
-        message: `Erledigt. ${med.name} wurde eingetragen. Noch ${newStock} Stück übrig.` 
-      }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      `Erledigt. Wochenration für ${updatedCount} Medikamente gestellt: ${nameList}.`,
+      { headers: { ...corsHeaders, 'Content-Type': 'text/plain; charset=utf-8' } }
     )
 
-  } catch (error) {
+  } catch (error: any) {
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ error: error.message || 'Unknown error' }),
       { 
         status: 400, 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' } 

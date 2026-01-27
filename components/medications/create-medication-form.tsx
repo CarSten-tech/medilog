@@ -267,7 +267,7 @@ export function CreateMedicationForm({ onSuccess }: CreateMedicationFormProps) {
           <AlertDialogHeader>
             <AlertDialogTitle>Doppelter Name erkannt</AlertDialogTitle>
             <AlertDialogDescription>
-              Ein Medikament mit dem Namen "{pendingData?.name}" existiert bereits. Möchtest du es trotzdem erstellen?
+              Ein Medikament mit dem Namen &quot;{pendingData?.name}&quot; existiert bereits. Möchtest du es trotzdem erstellen?
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
