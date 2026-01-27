@@ -91,6 +91,8 @@ export function CreateMedicationForm({ onSuccess }: CreateMedicationFormProps) {
             placeholder="z.B. Ibuprofen 600" 
             {...form.register('name')} 
             className="h-11"
+            autoComplete="off"
+            data-1p-ignore
             />
             {form.formState.errors.name && <p className="text-sm text-red-500">{form.formState.errors.name.message}</p>}
         </div>
