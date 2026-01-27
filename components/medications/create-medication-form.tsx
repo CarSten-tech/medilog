@@ -97,39 +97,39 @@ export function CreateMedicationForm({ onSuccess }: CreateMedicationFormProps) {
 
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             {/* Current Stock */}
-            <div className="space-y-2">
+            <div className="flex flex-col gap-2 sm:h-full">
                 <Label htmlFor="stock">Aktueller Vorrat (Stück)</Label>
                 <Input 
                 id="stock" 
                 type="number" 
                 {...form.register('current_stock', { valueAsNumber: true })} 
-                className="h-11"
+                className="h-11 mt-auto"
                 />
                 {form.formState.errors.current_stock && <p className="text-sm text-red-500">{form.formState.errors.current_stock.message}</p>}
             </div>
 
             {/* Daily Dosage */}
-            <div className="space-y-2">
+            <div className="flex flex-col gap-2 sm:h-full">
                 <Label htmlFor="dosage">Tagesdosis (Gesamt)</Label>
                 <Input 
                 id="dosage" 
                 type="number"
                 step="0.5" 
                 {...form.register('daily_dosage', { valueAsNumber: true })} 
-                className="h-11"
+                className="h-11 mt-auto"
                 />
                 {form.formState.errors.daily_dosage && <p className="text-sm text-red-500">{form.formState.errors.daily_dosage.message}</p>}
             </div>
 
             {/* Package Size */}
-            <div className="space-y-2">
+            <div className="flex flex-col gap-2 sm:h-full">
                 <Label htmlFor="package_size">Packungsgröße (Optional)</Label>
                 <Input 
                 id="package_size" 
                 type="number" 
                 placeholder="z.B. 20 (ganze Packung)"
                 {...form.register('package_size', { valueAsNumber: true })} 
-                className="h-11"
+                className="h-11 mt-auto"
                 />
                 {form.formState.errors.package_size && <p className="text-sm text-red-500">{form.formState.errors.package_size.message}</p>}
             </div>

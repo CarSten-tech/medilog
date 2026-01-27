@@ -178,7 +178,7 @@ export function EditMedicationForm({ medicationId, initialData, onSuccess }: Edi
 
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             {/* Current Stock */}
-            <div className="flex flex-col gap-2 h-full">
+            <div className="flex flex-col gap-2 sm:h-full">
                 <Label htmlFor="stock">Aktueller Vorrat</Label>
                 <div className="flex gap-2 mt-auto">
                     <Input 
@@ -207,7 +207,7 @@ export function EditMedicationForm({ medicationId, initialData, onSuccess }: Edi
             </div>
 
             {/* Daily Dosage */}
-            <div className="flex flex-col gap-2 h-full">
+            <div className="flex flex-col gap-2 sm:h-full">
                 <Label htmlFor="dosage">Tagesdosis (Gesamt)</Label>
                 <Input 
                 id="dosage" 
@@ -220,7 +220,7 @@ export function EditMedicationForm({ medicationId, initialData, onSuccess }: Edi
             </div>
 
             {/* Package Size */}
-            <div className="flex flex-col gap-2 h-full">
+            <div className="flex flex-col gap-2 sm:h-full">
                 <Label htmlFor="package_size">Packungsgröße</Label>
                 <Input 
                 id="package_size" 
