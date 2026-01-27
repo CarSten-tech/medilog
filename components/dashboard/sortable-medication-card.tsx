@@ -22,6 +22,7 @@ export function SortableMedicationCard(props: MedicationCardProps) {
   }
 
   return (
+    // eslint-disable-next-line react-dom/no-unsafe-styles
     <div ref={setNodeRef} style={style} {...attributes} {...listeners}>
       <MedicationCard {...props} />
     </div>
