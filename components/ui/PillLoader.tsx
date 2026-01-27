@@ -5,35 +5,35 @@ export default function PillLoader() {
     <div className="flex items-center justify-center p-8">
       <style>{`
         @keyframes runVertical {
-          /* Gesamtlänge (ca. 76) */
-          to { stroke-dashoffset: -76; } 
+          /* Pfadlänge ca. 72 */
+          to { stroke-dashoffset: -72; } 
         }
         .pill-runner {
-          /* 10px Strich (Höhe der Mitte), Rest Lücke */
-          stroke-dasharray: 10 66; 
-          /* Schneller: 2.5s */
-          animation: runVertical 2.5s linear infinite;
+          /* 9px Strich (Höhe), Rest Lücke */
+          stroke-dasharray: 9 63; 
+          /* Schneller: 2.0s */
+          animation: runVertical 2.0s linear infinite;
         }
       `}</style>
       
       {/* Container gedreht (-45°) */}
       <div className="relative w-16 h-16 -rotate-45">
         
-        {/* 1. HINTERGRUND: Längliche Pille (22x10) */}
+        {/* 1. HINTERGRUND: Pille (22x9) - Länglicher */}
         <svg
           xmlns="http://www.w3.org/2000/svg"
           viewBox="0 0 24 24"
           fill="none"
           stroke="currentColor"
-          strokeWidth="2"
+          strokeWidth="2.5" // Dicker (wie Bild)
           strokeLinecap="round"
           strokeLinejoin="round"
-          className="absolute inset-0 w-full h-full text-gray-100"
+          className="absolute inset-0 w-full h-full text-gray-200"
         >
-          {/* Länglicher: Breite 22, Höhe 10, Radius 5 */}
-          <rect x="1" y="7" width="22" height="10" rx="5" />
+          {/* x=1, y=7.5, w=22, h=9, r=4.5 */}
+          <rect x="1" y="7.5" width="22" height="9" rx="4.5" />
           {/* Mittelstrich */}
-          <line x1="12" y1="7" x2="12" y2="17" />
+          <line x1="12" y1="7.5" x2="12" y2="16.5" />
         </svg>
 
         {/* 2. VORDERGRUND: Läufer */}
@@ -42,25 +42,25 @@ export default function PillLoader() {
           viewBox="0 0 24 24"
           fill="none"
           stroke="currentColor"
-          strokeWidth="2.5"
+          strokeWidth="3" // Läufer etwas dicker hervorheben
           strokeLinecap="round"
           strokeLinejoin="round"
           className="absolute inset-0 w-full h-full text-[#339989]"
         >
           {/* 
-            Pfad für 22x10 Pille (Mitte 12,7):
-            M 12 7          -> Start Oben Mitte
-            L 6 7           -> Nach Links (6px)
-            A 5 5 0 0 0 6 17 -> Bogen Links Unten (Radius 5)
-            L 12 17         -> Zur Mitte Unten (6px)
-            L 12 7          -> MITTE HOCH (10px)
-            L 18 7          -> Nach Rechts (6px)
-            A 5 5 0 0 1 18 17 -> Bogen Rechts Unten (Radius 5)
-            L 12 17         -> Zur Mitte Unten (6px)
-            L 12 7          -> MITTE HOCH (10px - Loop Ende)
+            Pfad für 22x9 Pille (Mitte 12, 7.5):
+            M 12 7.5        -> Start Oben Mitte
+            L 5.5 7.5       -> Nach Links
+            A 4.5 4.5 0 0 0 5.5 16.5 -> Bogen Links
+            L 12 16.5       -> Mitte Unten
+            L 12 7.5        -> HOCH
+            L 18.5 7.5      -> Rechts
+            A 4.5 4.5 0 0 1 18.5 16.5 -> Bogen Rechts
+            L 12 16.5       -> Mitte Unten
+            L 12 7.5        -> HOCH
           */}
           <path 
-            d="M12 7 L6 7 A5 5 0 0 0 6 17 L12 17 L12 7 L18 7 A5 5 0 0 1 18 17 L12 17 L12 7" 
+            d="M12 7.5 L5.5 7.5 A4.5 4.5 0 0 0 5.5 16.5 L12 16.5 L12 7.5 L18.5 7.5 A4.5 4.5 0 0 1 18.5 16.5 L12 16.5 L12 7.5" 
             className="pill-runner" 
           />
         </svg>
