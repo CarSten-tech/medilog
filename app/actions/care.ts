@@ -3,122 +3,124 @@
 import { createClient } from '@/utils/supabase/server'
 import { revalidatePath } from 'next/cache'
 
+/**
+ * Invite a caregiver via email.
+ * Uses a secure RPC function to resolve the email to a User ID.
+ */
 export async function inviteCaregiver(email: string) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
 
-  if (!user) throw new Error('Unauthorized')
-
-  // 1. Get User ID by Email (RPC)
-  const { data: inviteeId, error: rpcError } = await supabase
-    .rpc('get_user_id_by_email', { email_input: email })
-
-  if (rpcError || !inviteeId) {
-    console.error("RPC Error:", rpcError)
-    return { error: 'Nutzer nicht gefunden. Ist diese E-Mail registriert?' }
+  if (!user) {
+      return { error: 'Nicht authentifiziert' }
   }
 
-  if (inviteeId === user.id) {
+  // 1. Resolve Info
+  const { data: caregiverId, error: rpcError } = await supabase
+    .rpc('get_user_id_by_email', { email_input: email })
+
+  if (rpcError || !caregiverId) {
+    console.error("RPC Lookup failed:", rpcError)
+    // Security: Don't reveal if user exists or not specifically, but for this UX we need to say "User not found".
+    return { error: 'Kein Nutzer mit dieser E-Mail gefunden.' }
+  }
+
+  // 2. Validation
+  if (caregiverId === user.id) {
     return { error: 'Du kannst dich nicht selbst einladen.' }
   }
 
-  // 2. Create Relationship
+  // Check existing
+  const { data: existing } = await supabase
+    .from('care_relationships')
+    .select('id')
+    .eq('patient_id', user.id)
+    .eq('caregiver_id', caregiverId)
+    .single()
+
+  if (existing) {
+    return { error: 'Dieser Nutzer ist bereits eingeladen oder hinzugefügt.' }
+  }
+
+  // 3. Insert
   const { error: insertError } = await supabase
     .from('care_relationships')
     .insert({
       patient_id: user.id,
-      caregiver_id: inviteeId,
-      status: 'pending'
+      caregiver_id: caregiverId,
+      status: 'pending' // Default
     })
 
   if (insertError) {
-    if (insertError.code === '23505') {
-       return { error: 'Einladung bereits gesendet.' }
-    }
-    console.error("Insert Error:", insertError)
-    return { error: 'Fehler beim Senden der Einladung.' }
+    console.error("Insert failed:", insertError)
+    return { error: 'Fehler beim Speichern der Einladung.' }
   }
 
-  revalidatePath('/dashboard')
+  revalidatePath('/settings')
   return { success: true }
 }
 
-export async function acceptInvitation(relationshipId: string) {
+/**
+ * Get list of people who care for me (My Caregivers).
+ */
+export async function getMyCaregivers() {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  
+  if (!user) return []
+
+  // We need the EMAIL of the caregiver to display it.
+  // Since we don't have a direct join setup in TypeGen immediately visible,
+  // we will fetch relationships first, then resolve emails via 'profiles' or another query.
+  // Ideally, use a join: .select('*, caregiver:profiles!caregiver_id(email)') if FK exists.
+  // Fallback: Fetch IDs and then profiles.
+
+  const { data: rels } = await supabase
+    .from('care_relationships')
+    .select('*')
+    .eq('patient_id', user.id)
+  
+  if (!rels || rels.length === 0) return []
+
+  const caregiverIds = rels.map(r => r.caregiver_id)
+  
+  const { data: profiles } = await supabase
+    .from('profiles')
+    .select('id, email, full_name')
+    .in('id', caregiverIds)
+    
+  // Combine data
+  return rels.map(r => {
+      const profile = profiles?.find(p => p.id === r.caregiver_id)
+      return {
+          id: r.id,
+          caregiver_id: r.caregiver_id,
+          status: r.status,
+          email: profile?.email || 'Unbekannt',
+          full_name: profile?.full_name
+      }
+  })
+}
+
+/**
+ * Remove a caregiver (Revoke access).
+ */
+export async function removeCaregiver(relationshipId: string) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
 
-  if (!user) throw new Error('Unauthorized')
+  if (!user) return { error: 'Nicht authentifiziert' }
 
   const { error } = await supabase
     .from('care_relationships')
-    .update({ status: 'accepted' })
+    .delete()
     .eq('id', relationshipId)
-    .eq('caregiver_id', user.id) // Security check
+    .eq('patient_id', user.id) // Ensure I am the patient deleting my caregiver
 
   if (error) {
-    return { error: 'Fehler beim Annehmen.' }
+     return { error: 'Löschen fehlgeschlagen.' }
   }
 
-  revalidatePath('/dashboard')
+  revalidatePath('/settings')
   return { success: true }
-}
-
-export async function removeRelationship(relationshipId: string) {
-    const supabase = await createClient()
-    const { error } = await supabase
-      .from('care_relationships')
-      .delete()
-      .eq('id', relationshipId)
-    
-    if (error) return { error: 'Fehler beim Löschen.' }
-    revalidatePath('/dashboard')
-    return { success: true }
-}
-
-export async function getCaregivers() {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  
-  if (!user) return { mine: [], others: [] }
-
-  // My Caregivers (People taking care of me)
-  const { data: myCaregivers } = await supabase
-    .from('care_relationships')
-    .select(`
-      id, status, 
-      caregiver_id
-    `)
-    .eq('patient_id', user.id)
-
-  // My Patients (People I take care of)
-  const { data: myPatients } = await supabase
-    .from('care_relationships')
-    .select(`
-      id, status,
-      patient_id
-    `)
-    .eq('caregiver_id', user.id)
-
-  // Fetch Emails separately to be safe (avoiding join issues)
-  // We can use the same RPC or just query profiles table if we trust it. 
-  // Let's assume we use 'profiles' since we have it, it's cleaner for UI.
-  // BUT user prompt didn't strictly say "use profiles", but we need email for UI.
-  
-  const allUserIds = [
-      ...(myCaregivers?.map(c => c.caregiver_id) || []),
-      ...(myPatients?.map(p => p.patient_id) || [])
-  ]
-  
-  let profiles: any[] = []
-  if (allUserIds.length > 0) {
-      const { data } = await supabase.from('profiles').select('id, email').in('id', allUserIds)
-      profiles = data || []
-  }
-
-  const mapEmail = (id: string) => profiles.find(p => p.id === id)?.email || 'Unknown'
-
-  return {
-    myCaregivers: myCaregivers?.map(c => ({...c, email: mapEmail(c.caregiver_id)})) || [],
-    myPatients: myPatients?.map(p => ({...p, email: mapEmail(p.patient_id)})) || []
-  }
 }
