@@ -37,7 +37,7 @@ export function CreateMedicationForm({ onSuccess }: CreateMedicationFormProps) {
     resolver: zodResolver(MedicationFormSchema),
     defaultValues: {
       refill_threshold: 10,
-      frequency: 'daily',
+      frequency: 'daily' as const,
     }
   })
 

@@ -73,7 +73,7 @@ export function EditMedicationForm({ medicationId, initialData, onSuccess }: Edi
       name: initialData.name,
       current_stock: initialData.current_stock,
       daily_dosage: initialData.frequency === 'weekly' ? initialData.daily_dosage * 7 : (initialData.daily_dosage ?? 1),
-      frequency: initialData.frequency || 'daily',
+      frequency: (initialData.frequency || 'daily') as "daily" | "weekly",
       frequency_note: initialData.frequency_note ?? '',
       expiry_date: initialData.expiry_date ? new Date(initialData.expiry_date) : undefined,
       package_size: initialData.package_size ?? undefined,
