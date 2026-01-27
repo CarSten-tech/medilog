@@ -8,7 +8,7 @@ export const MedicationFormSchema = z.object({
     .min(0, { message: "Vorrat darf nicht negativ sein." })
     .refine((n) => !Number.isNaN(n), { message: "Bitte geben Sie eine gültige Zahl ein" }),
   daily_dosage: z.number()
-    .min(0.1, { message: "Tagesdosis muss mindestens 0.1 sein." })
+    .min(0.001, { message: "Dosis muss größer als 0 sein." })
     .refine((n) => !Number.isNaN(n), { message: "Bitte geben Sie eine gültige Zahl ein" }),
   package_size: z.number()
     .min(1, { message: "Packungsgröße muss mindestens 1 sein." })
@@ -24,6 +24,7 @@ export const MedicationFormSchema = z.object({
   refill_threshold: z.number()
     .min(1, { message: "Warnschwelle muss mindestens 1 sein." })
     .refine((n) => !Number.isNaN(n), { message: "Bitte geben Sie eine gültige Zahl ein" }),
+  frequency: z.enum(['daily', 'weekly']).default('daily'),
   frequency_note: z.string().optional(),
   expiry_date: z.date().optional().nullable(),
 })

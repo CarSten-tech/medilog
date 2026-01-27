@@ -41,8 +41,10 @@ export function CreateMedicationForm({ onSuccess }: CreateMedicationFormProps) {
   })
 
   const [frequency, setFrequency] = useState({ morning: '', noon: '', evening: '' })
+  const [frequencyType, setFrequencyType] = useState<'daily' | 'weekly'>('daily')
 
   const updateFrequencyNote = (newFreq: typeof frequency) => {
+    // ... existing logic
     const note = `Morgens: ${newFreq.morning || 0}, Mittags: ${newFreq.noon || 0}, Abends: ${newFreq.evening || 0}`
     form.setValue('frequency_note', note)
     setFrequency(newFreq)
@@ -50,16 +52,26 @@ export function CreateMedicationForm({ onSuccess }: CreateMedicationFormProps) {
 
   const handlePreSubmit = async (data: MedicationFormData) => {
     setIsSubmitting(true)
+    
+    // Adjust data based on frequency type
+    const finalData = { ...data }
+    finalData.frequency = frequencyType
+    
+    if (frequencyType === 'weekly') {
+        // Convert weekly dose to daily rate
+        finalData.daily_dosage = data.daily_dosage / 7
+    }
+
     try {
       // Check for duplicates
-      const exists = await checkMedicationName(data.name)
+      const exists = await checkMedicationName(finalData.name)
       if (exists) {
-        setPendingData(data)
+        setPendingData(finalData)
         setShowDuplicateDialog(true)
         setIsSubmitting(false)
         return
       }
-      await performCreate(data)
+      await performCreate(finalData)
     } catch (error) {
       console.error(error)
       setIsSubmitting(false)
@@ -112,18 +124,49 @@ export function CreateMedicationForm({ onSuccess }: CreateMedicationFormProps) {
                 )}
             </div>
 
-            {/* Daily Dosage */}
+            {/* Daily Dosage with Frequency Toggle */}
             <div className="flex flex-col gap-2 relative pb-6">
-                <Label htmlFor="dosage">Tagesdosis (Gesamt)</Label>
+                <div className="flex items-center justify-between">
+                    <Label htmlFor="dosage">{frequencyType === 'daily' ? 'Tagesdosis' : 'Wochendosis'}</Label>
+                    <div className="flex bg-slate-100 rounded-lg p-0.5 h-7">
+                        <button
+                            type="button"
+                            onClick={() => setFrequencyType('daily')}
+                            className={cn(
+                                "px-2 text-xs rounded-md transition-all flex items-center",
+                                frequencyType === 'daily' ? "bg-white shadow-sm text-teal-700 font-medium" : "text-slate-500 hover:text-slate-700"
+                            )}
+                        >
+                            Tag
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => setFrequencyType('weekly')}
+                            className={cn(
+                                "px-2 text-xs rounded-md transition-all flex items-center",
+                                frequencyType === 'weekly' ? "bg-white shadow-sm text-teal-700 font-medium" : "text-slate-500 hover:text-slate-700"
+                            )}
+                        >
+                            Woche
+                        </button>
+                    </div>
+                </div>
                 <Input 
                 id="dosage" 
                 type="number"
-                step="0.5" 
+                step={frequencyType === 'weekly' ? "1" : "0.5"}
                 placeholder="0"
                 autoComplete="off"
                 {...form.register('daily_dosage', { valueAsNumber: true })} 
                 className="h-11 mt-auto placeholder:text-slate-300"
                 />
+                
+                {frequencyType === 'weekly' && form.watch('daily_dosage') > 0 && (
+                     <p className="text-[10px] text-slate-400 absolute bottom-8 right-3 pointer-events-none">
+                        Ø {(form.watch('daily_dosage') / 7).toFixed(2)}/Tag
+                     </p>
+                )}
+
                 {form.formState.errors.daily_dosage && (
                     <p className="text-xs text-red-500 absolute bottom-0 left-0">{form.formState.errors.daily_dosage.message}</p>
                 )}
