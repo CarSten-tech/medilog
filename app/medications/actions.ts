@@ -25,6 +25,7 @@ export async function createMedication(data: MedicationFormData) {
       frequency_note: data.frequency_note,
       expiry_date: data.expiry_date ? data.expiry_date.toISOString() : null,
       refill_threshold: data.refill_threshold,
+      package_size: data.package_size,
       // Defaults/Placeholders for constraints if any
       form_factor: 'tablet', // defaulting for now as we removed the field from UI
       strength: 'N/A' 
@@ -37,6 +38,26 @@ export async function createMedication(data: MedicationFormData) {
 
   revalidatePath('/dashboard')
   return { success: true }
+}
+
+export async function checkMedicationName(name: string, excludeId?: string) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+
+  if (!user) return false
+
+  let query = supabase
+    .from('medications')
+    .select('id')
+    .eq('user_id', user.id)
+    .ilike('name', name) // Case-insensitive check
+
+  if (excludeId) {
+    query = query.neq('id', excludeId)
+  }
+
+  const { data } = await query.single()
+  return !!data
 }
 
 export async function updateMedication(id: string, data: MedicationFormData) {

@@ -11,8 +11,19 @@ import { Calendar } from "@/components/ui/calendar"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { cn } from "@/lib/utils"
 import { format } from "date-fns"
-import { CalendarIcon, Loader2, Trash2, Pencil } from "lucide-react"
+import { CalendarIcon, Loader2, Trash2, Pencil, XIcon } from "lucide-react"
 import { useState } from "react"
+import { checkMedicationName } from "@/app/medications/actions"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 
 export interface EditMedicationFormProps {
   medicationId: string
@@ -32,6 +43,28 @@ export function EditMedicationForm({ medicationId, initialData, onSuccess }: Edi
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
   const [isEditingName, setIsEditingName] = useState(false)
+  
+  // Dialog States
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false)
+  const [showDuplicateDialog, setShowDuplicateDialog] = useState(false)
+  const [pendingData, setPendingData] = useState<MedicationFormData | null>(null)
+
+  // Frequency State (Parse initial string or default to 0)
+  // Format: "M: 1, M: 0, A: 1, N: 0"
+  const parseFrequency = (note: string = '') => {
+    const parts = note.match(/Morgens: ([\d.]+), Mittags: ([\d.]+), Abends: ([\d.]+), Nachts: ([\d.]+)/)
+    if (parts) {
+      return {
+        morning: parts[1],
+        noon: parts[2],
+        evening: parts[3],
+        night: parts[4]
+      }
+    }
+    return { morning: '', noon: '', evening: '', night: '' }
+  }
+
+  const [frequency, setFrequency] = useState(parseFrequency(initialData.frequency_note || ''))
 
   const form = useForm<MedicationFormData>({
     resolver: zodResolver(MedicationFormSchema),
@@ -46,8 +79,34 @@ export function EditMedicationForm({ medicationId, initialData, onSuccess }: Edi
     }
   })
 
-  const onSubmit = async (data: MedicationFormData) => {
+  // Update hidden frequency_note field when inputs change
+  const updateFrequencyNote = (newFreq: typeof frequency) => {
+    const note = `Morgens: ${newFreq.morning || 0}, Mittags: ${newFreq.noon || 0}, Abends: ${newFreq.evening || 0}, Nachts: ${newFreq.night || 0}`
+    form.setValue('frequency_note', note)
+    setFrequency(newFreq)
+  }
+
+  const handlePreSubmit = async (data: MedicationFormData) => {
     setIsSubmitting(true)
+    try {
+      // Check for duplicates only if name changed
+      if (data.name !== initialData.name) {
+        const exists = await checkMedicationName(data.name, medicationId)
+        if (exists) {
+          setPendingData(data)
+          setShowDuplicateDialog(true)
+          setIsSubmitting(false)
+          return
+        }
+      }
+      await performUpdate(data)
+    } catch (error) {
+      console.error(error)
+      setIsSubmitting(false)
+    }
+  }
+
+  const performUpdate = async (data: MedicationFormData) => {
     try {
       await updateMedication(medicationId, data)
       onSuccess()
@@ -55,12 +114,11 @@ export function EditMedicationForm({ medicationId, initialData, onSuccess }: Edi
       console.error(error)
     } finally {
       setIsSubmitting(false)
+      setShowDuplicateDialog(false)
     }
   }
 
   const handleDelete = async () => {
-    if (!confirm('Medikament wirklich löschen?')) return
-    
     setIsDeleting(true)
     try {
       await deleteMedication(medicationId)
@@ -69,55 +127,56 @@ export function EditMedicationForm({ medicationId, initialData, onSuccess }: Edi
       console.error(error)
     } finally {
       setIsDeleting(false)
+      setShowDeleteDialog(false)
     }
   }
 
   return (
-    <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 pt-4">
-        {/* Name */}
-        {/* Name (Locked by default) */}
-        <div className="space-y-2">
-            <Label htmlFor="name">Name des Medikaments</Label>
-            {!isEditingName ? (
-                <div className="flex items-center justify-between p-3 bg-slate-50 border border-slate-200 rounded-md">
-                    <span className="font-semibold text-slate-700">{form.getValues('name')}</span>
-                    <Button 
-                        type="button" 
-                        variant="ghost" 
-                        size="sm" 
-                        onClick={() => setIsEditingName(true)}
-                        className="h-8 w-8 p-0 text-slate-400 hover:text-teal-600 hover:bg-teal-50 cursor-pointer"
-                    >
-                        <Pencil className="h-4 w-4" />
-                        <span className="sr-only">Bearbeiten</span>
-                    </Button>
-                </div>
-            ) : (
-                <div className="flex gap-2">
-                    <Input 
-                        id="name" 
-                        placeholder="z.B. Ibuprofen 600" 
-                        {...form.register('name')} 
-                        className="h-11"
-                        autoFocus
-                    />
-                    <Button
-                        type="button"
-                        variant="ghost"
-                        onClick={() => setIsEditingName(false)}
-                        className="h-11 px-3"
-                    >
-                        Abbrechen
-                    </Button>
-                </div>
-            )}
-            {form.formState.errors.name && <p className="text-sm text-red-500">{form.formState.errors.name.message}</p>}
+    <>
+      <form onSubmit={form.handleSubmit(handlePreSubmit)} className="space-y-6">
+        
+        {/* Header Section with Name Lock */}
+        <div className="flex items-center justify-between pb-4 border-b mb-6">
+          {!isEditingName ? (
+            <div className="flex items-center gap-2">
+              <h2 className="text-xl font-bold text-slate-900">{form.watch('name')}</h2>
+              <Button 
+                type="button" 
+                variant="ghost" 
+                size="icon"
+                onClick={() => setIsEditingName(true)}
+                className="h-8 w-8 text-slate-400 hover:text-teal-600 hover:bg-teal-50 rounded-full"
+              >
+                <Pencil className="h-4 w-4" />
+                <span className="sr-only">Name bearbeiten</span>
+              </Button>
+            </div>
+          ) : (
+            <div className="flex items-center gap-2 flex-1">
+               <Input 
+                  id="name" 
+                  placeholder="Name" 
+                  {...form.register('name')} 
+                  className="h-10 text-lg font-semibold"
+                  autoFocus
+              />
+              <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => setIsEditingName(false)}
+                  className="h-10 w-10 text-slate-500"
+              >
+                  <XIcon className="h-5 w-5" />
+              </Button>
+            </div>
+          )}
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             {/* Current Stock */}
             <div className="space-y-2">
-                <Label htmlFor="stock">Aktueller Vorrat (Stück)</Label>
+                <Label htmlFor="stock">Aktueller Vorrat</Label>
                 <div className="flex gap-2">
                     <Input 
                         id="stock" 
@@ -125,7 +184,8 @@ export function EditMedicationForm({ medicationId, initialData, onSuccess }: Edi
                         {...form.register('current_stock', { valueAsNumber: true })} 
                         className="h-11"
                     />
-                    {form.watch('package_size') && form.watch('package_size')! > 0 && (
+                    {/* NaN Fix: Only show button if package_size is a valid number > 0 */}
+                    {form.watch('package_size') && !isNaN(form.watch('package_size')!) && form.watch('package_size')! > 0 && (
                         <Button 
                             type="button" 
                             variant="outline" 
@@ -158,11 +218,11 @@ export function EditMedicationForm({ medicationId, initialData, onSuccess }: Edi
 
             {/* Package Size */}
             <div className="space-y-2">
-                <Label htmlFor="package_size">Packungsgröße (Optional)</Label>
+                <Label htmlFor="package_size">Packungsgröße</Label>
                 <Input 
                 id="package_size" 
                 type="number" 
-                placeholder="z.B. 20 (ganze Packung)"
+                placeholder="z.B. 20"
                 {...form.register('package_size', { valueAsNumber: true })} 
                 className="h-11"
                 />
@@ -170,33 +230,47 @@ export function EditMedicationForm({ medicationId, initialData, onSuccess }: Edi
             </div>
         </div>
 
-        {/* Frequency Note */}
-        <div className="space-y-2">
-            <Label htmlFor="frequency">Wie oft / Wann? (Optional)</Label>
-            <Input 
-            id="frequency" 
-            placeholder="z.B. Morgens 1, Abends 1/2" 
-            {...form.register('frequency_note')} 
-            className="h-11"
-            />
+        {/* Frequency 4-Slot Input */}
+        <div className="space-y-3 p-4 bg-slate-50 rounded-lg border border-slate-100">
+            <Label className="text-base font-semibold text-slate-700">Wann wird eingenommen?</Label>
+            <div className="grid grid-cols-4 gap-2">
+              {['Morgens', 'Mittags', 'Abends', 'Nachts'].map((time) => (
+                 <div key={time} className="space-y-1">
+                    <Label className="text-xs text-slate-500 font-medium uppercase tracking-wider">{time}</Label>
+                    <Input 
+                      type="number" 
+                      step="0.5" 
+                      placeholder="0"
+                      className="h-10 text-center bg-white"
+                      value={frequency[time === 'Morgens' ? 'morning' : time === 'Mittags' ? 'noon' : time === 'Abends' ? 'evening' : 'night'] as string}
+                      onChange={(e) => {
+                         const val = e.target.value
+                         const field = time === 'Morgens' ? 'morning' : time === 'Mittags' ? 'noon' : time === 'Abends' ? 'evening' : 'night'
+                         updateFrequencyNote({ ...frequency, [field]: val })
+                      }}
+                    />
+                 </div>
+              ))}
+            </div>
+            <input type="hidden" {...form.register('frequency_note')} />
         </div>
 
         {/* Expiry Date */}
         <div className="space-y-2 flex flex-col">
-            <Label>Ablaufdatum (Optional)</Label>
+            <Label>Ablaufdatum</Label>
             <Popover>
             <PopoverTrigger asChild>
                 <Button
                 variant={"outline"}
                 className={cn(
-                    "h-11 pl-3 text-left font-normal border-slate-200 cursor-pointer",
+                    "h-11 pl-3 text-left font-normal border-slate-200 cursor-pointer w-full",
                     !form.watch('expiry_date') && "text-muted-foreground"
                 )}
                 >
                 {form.watch('expiry_date') ? (
                     format(form.watch('expiry_date')!, "dd.MM.yyyy")
                 ) : (
-                    <span>Wähle ein Datum</span>
+                    <span>Kein Datum gewählt</span>
                 )}
                 <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
                 </Button>
@@ -213,32 +287,62 @@ export function EditMedicationForm({ medicationId, initialData, onSuccess }: Edi
             </Popover>
         </div>
 
-        <div className="flex justify-between pt-4 border-t">
+        <div className="flex justify-between pt-6 border-t mt-8">
             <Button 
                 type="button"
-                variant="outline"
-                onClick={handleDelete}
-                className="text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200 cursor-pointer"
-                disabled={isDeleting}
+                variant="ghost"
+                onClick={() => setShowDeleteDialog(true)}
+                className="text-red-500 hover:text-red-600 hover:bg-red-50"
             >
-                {isDeleting ? (
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                ) : (
-                    <Trash2 className="mr-2 h-4 w-4" />
-                )}
-                Löschen
+                Medikament löschen
             </Button>
             <Button 
                 type="submit" 
-                className="bg-teal-600 hover:bg-teal-700 text-white min-w-[120px] cursor-pointer"
+                className="bg-teal-600 hover:bg-teal-700 text-white min-w-[140px]"
                 disabled={isSubmitting}
             >
-                {isSubmitting ? (
-                    <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Speichern</>
-                ) : 'Speichern'}
+                {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                Speichern
             </Button>
         </div>
-    </form>
+      </form>
+
+      {/* Delete Alert Dialog */}
+      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Medikament wirklich löschen?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Diese Aktion kann nicht rückgängig gemacht werden. Das Medikament "{initialData.name}" wird unwiderruflich entfernt.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Abbrechen</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDelete} className="bg-red-600 hover:bg-red-700">
+              {isDeleting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Löschen bestätigen
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Duplicate Warning Dialog */}
+      <AlertDialog open={showDuplicateDialog} onOpenChange={setShowDuplicateDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Doppelter Name erkannt</AlertDialogTitle>
+            <AlertDialogDescription>
+              Ein Medikament mit dem Namen "{pendingData?.name}" existiert bereits. Möchtest du es trotzdem speichern?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setIsSubmitting(false)}>Abbrechen</AlertDialogCancel>
+            <AlertDialogAction onClick={() => pendingData && performUpdate(pendingData)} className="bg-teal-600 hover:bg-teal-700">
+              Trotzdem speichern
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   )
 }
-
