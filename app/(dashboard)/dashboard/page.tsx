@@ -8,6 +8,9 @@ import { InviteAlert } from '@/components/dashboard/invite-alert'
 export default async function DashboardPage(props: {
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>
 }) {
+  // TEST: Artificial delay to show loader
+  await new Promise(resolve => setTimeout(resolve, 3000))
+
   const searchParams = await props.searchParams
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
