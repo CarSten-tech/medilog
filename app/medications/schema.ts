@@ -1,3 +1,5 @@
+import { z } from 'zod'
+
 export const MedicationFormSchema = z.object({
   name: z.string().min(2, {
     message: "Name muss mindestens 2 Zeichen lang sein.",
@@ -17,3 +19,5 @@ export const MedicationFormSchema = z.object({
   frequency_note: z.string().optional(),
   expiry_date: z.date().optional().nullable(),
 })
+
+export type MedicationFormData = z.infer<typeof MedicationFormSchema>
