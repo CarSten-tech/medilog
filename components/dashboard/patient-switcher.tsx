@@ -45,7 +45,7 @@ export function PatientSwitcher({ patients, currentUser }: PatientSwitcherProps)
       <DropdownMenuTrigger asChild>
         <Button variant="ghost" className={cn("flex items-center gap-2", !isSelf && "text-teal-600 font-semibold")}>
             {isSelf ? <User className="h-4 w-4" /> : <Users className="h-4 w-4" />}
-            <span className="hidden sm:inline-block max-w-[150px] truncate">
+            <span className="inline-block max-w-[100px] sm:max-w-[150px] truncate">
                 {activeName}
             </span>
             <ChevronDown className="h-4 w-4 opacity-50" />

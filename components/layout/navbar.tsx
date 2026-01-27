@@ -35,7 +35,7 @@ export function Navbar({ user, patients = [] }: NavbarProps) {
                 <PatientSwitcher patients={patients} currentUser={{ id: user.id || '', email: user.email }} />
             )}
             <Link href="/dashboard/care" title="Care Team verwalten">
-                <Button variant="ghost" size="sm" className="hidden sm:flex text-slate-500 hover:text-slate-900 cursor-pointer">
+                <Button variant="ghost" size="sm" className="flex text-slate-500 hover:text-slate-900 cursor-pointer">
                     <Users className="h-5 w-5 mr-2" />
                     <span className="hidden lg:inline">Team</span>
                 </Button>
