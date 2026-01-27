@@ -31,7 +31,7 @@ export default async function CareTeamPage() {
     <div className="p-8 max-w-4xl mx-auto space-y-8">
       <div className="flex flex-col gap-4">
         <Link href="/dashboard">
-            <Button variant="ghost" size="sm" className="pl-0 text-slate-500 hover:text-slate-900 -ml-2">
+            <Button variant="ghost" size="sm" className="pl-0 text-slate-500 hover:text-slate-900 -ml-2 cursor-pointer">
                 <ArrowLeft className="h-4 w-4 mr-1" />
                 Zurück zum Dashboard
             </Button>
