@@ -48,7 +48,9 @@ export default async function CareTeamPage() {
             <CardContent className="space-y-4">
                 <form action={runInvite} className="flex gap-2">
                     <Input name="email" placeholder="E-Mail des Betreuers" type="email" required />
-                    <Button type="submit" size="icon"><Plus className="h-4 w-4" /></Button>
+                    <Button type="submit" size="icon" className="cursor-pointer hover:bg-teal-700 transition-colors">
+                        <Plus className="h-4 w-4" />
+                    </Button>
                 </form>
 
                 <div className="space-y-2">
