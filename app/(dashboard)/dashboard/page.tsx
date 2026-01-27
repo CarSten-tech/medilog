@@ -5,13 +5,35 @@ import { WeeklyRefillButton } from "@/components/dashboard/weekly-refill-button"
 import { getPendingInvites } from '@/app/actions/care'
 import { InviteAlert } from '@/components/dashboard/invite-alert'
 
-export default async function DashboardPage() {
+export default async function DashboardPage({
+  searchParams,
+}: {
+  searchParams: { [key: string]: string | string[] | undefined }
+}) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
 
   if (!user) return null 
   
   const invites = await getPendingInvites()
+
+  // Determine target user (Self or Patient)
+  const patientId = typeof searchParams.patientId === 'string' ? searchParams.patientId : null
+  const targetUserId = patientId || user.id
+  
+  let dashboardTitle = "Meine Medikamente"
+
+  // If viewing patient, fetch name
+  if (patientId && patientId !== user.id) {
+       const { data: profile } = await supabase
+        .from('profiles')
+        .select('full_name, email')
+        .eq('id', patientId)
+        .single()
+       
+       const name = profile?.full_name || profile?.email || 'Patient'
+       dashboardTitle = `${name}s Medikamente`
+  }
 
   const today = new Date().toLocaleDateString('de-DE', {
     weekday: 'long',
@@ -23,7 +45,7 @@ export default async function DashboardPage() {
   const { data: medications, error } = await supabase
     .from('medications')
     .select('*')
-    .eq('user_id', user.id)
+    .eq('user_id', targetUserId)
     .order('display_order', { ascending: true })
 
   if (error) {
@@ -94,7 +116,7 @@ export default async function DashboardPage() {
       
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
         <div>
-           <h1 className="text-3xl font-bold tracking-tight text-slate-900">Meine Medikamente</h1>
+           <h1 className="text-3xl font-bold tracking-tight text-slate-900">{dashboardTitle}</h1>
            <p className="text-slate-500 font-medium">{today}</p>
         </div>
         <WeeklyRefillButton />
