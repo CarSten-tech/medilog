@@ -5,23 +5,21 @@ export default function PillLoader() {
     <div className="flex items-center justify-center p-8">
       <style>{`
         @keyframes runVertical {
-          /* Gesamtlänge des Pfads ist ca. 80 Einheiten.
-             Wir schieben den Dash-Offset um genau diese Länge, 
-             damit der Loop nahtlos ist. */
-          to { stroke-dashoffset: -78; } 
+          /* Gesamtlänge (ca. 76) */
+          to { stroke-dashoffset: -76; } 
         }
         .pill-runner {
-          /* 12px Strich (Länge der Mitte), Rest Lücke */
-          stroke-dasharray: 12 66; 
-          /* Langsamer: 3.5s */
-          animation: runVertical 3.5s linear infinite;
+          /* 10px Strich (Höhe der Mitte), Rest Lücke */
+          stroke-dasharray: 10 66; 
+          /* Schneller: 2.5s */
+          animation: runVertical 2.5s linear infinite;
         }
       `}</style>
       
       {/* Container gedreht (-45°) */}
       <div className="relative w-16 h-16 -rotate-45">
         
-        {/* 1. HINTERGRUND: Pille + Mittelstrich */}
+        {/* 1. HINTERGRUND: Längliche Pille (22x10) */}
         <svg
           xmlns="http://www.w3.org/2000/svg"
           viewBox="0 0 24 24"
@@ -32,13 +30,13 @@ export default function PillLoader() {
           strokeLinejoin="round"
           className="absolute inset-0 w-full h-full text-gray-100"
         >
-          {/* Außenrahmen */}
-          <rect x="2" y="6" width="20" height="12" rx="6" />
-          {/* Statischer Mittelstrich */}
-          <line x1="12" y1="6" x2="12" y2="18" />
+          {/* Länglicher: Breite 22, Höhe 10, Radius 5 */}
+          <rect x="1" y="7" width="22" height="10" rx="5" />
+          {/* Mittelstrich */}
+          <line x1="12" y1="7" x2="12" y2="17" />
         </svg>
 
-        {/* 2. VORDERGRUND: Läufer auf Pfad */}
+        {/* 2. VORDERGRUND: Läufer */}
         <svg
           xmlns="http://www.w3.org/2000/svg"
           viewBox="0 0 24 24"
@@ -50,19 +48,19 @@ export default function PillLoader() {
           className="absolute inset-0 w-full h-full text-[#339989]"
         >
           {/* 
-            Pfad-Logik für "Linke Hälfte -> Mitte Hoch -> Rechte Hälfte -> Mitte Hoch":
-            M 12 6          -> Start Oben Mitte
-            L 8 6           -> Nach Links
-            A 6 6 0 0 0 8 18 -> Bogen Links Unten
-            L 12 18         -> Zur Mitte Unten
-            L 12 6          -> MITTE HOCH (Der senkrechte Strich)
-            L 16 6          -> Nach Rechts
-            A 6 6 0 0 1 16 18 -> Bogen Rechts Unten
-            L 12 18         -> Zur Mitte Unten
-            L 12 6          -> MITTE HOCH (Zurück zum Start)
+            Pfad für 22x10 Pille (Mitte 12,7):
+            M 12 7          -> Start Oben Mitte
+            L 6 7           -> Nach Links (6px)
+            A 5 5 0 0 0 6 17 -> Bogen Links Unten (Radius 5)
+            L 12 17         -> Zur Mitte Unten (6px)
+            L 12 7          -> MITTE HOCH (10px)
+            L 18 7          -> Nach Rechts (6px)
+            A 5 5 0 0 1 18 17 -> Bogen Rechts Unten (Radius 5)
+            L 12 17         -> Zur Mitte Unten (6px)
+            L 12 7          -> MITTE HOCH (10px - Loop Ende)
           */}
           <path 
-            d="M12 6 L8 6 A6 6 0 0 0 8 18 L12 18 L12 6 L16 6 A6 6 0 0 1 16 18 L12 18 L12 6" 
+            d="M12 7 L6 7 A5 5 0 0 0 6 17 L12 17 L12 7 L18 7 A5 5 0 0 1 18 17 L12 17 L12 7" 
             className="pill-runner" 
           />
         </svg>
