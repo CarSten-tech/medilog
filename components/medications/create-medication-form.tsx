@@ -103,6 +103,7 @@ export function CreateMedicationForm({ onSuccess }: CreateMedicationFormProps) {
                 id="stock" 
                 type="number" 
                 placeholder="0"
+                autoComplete="off"
                 {...form.register('current_stock', { valueAsNumber: true })} 
                 className="h-11 mt-auto placeholder:text-slate-300"
                 />
@@ -119,6 +120,7 @@ export function CreateMedicationForm({ onSuccess }: CreateMedicationFormProps) {
                 type="number"
                 step="0.5" 
                 placeholder="0"
+                autoComplete="off"
                 {...form.register('daily_dosage', { valueAsNumber: true })} 
                 className="h-11 mt-auto placeholder:text-slate-300"
                 />
@@ -134,6 +136,7 @@ export function CreateMedicationForm({ onSuccess }: CreateMedicationFormProps) {
                 id="package_size" 
                 type="number" 
                 placeholder="z.B. 20"
+                autoComplete="off"
                 {...form.register('package_size', { valueAsNumber: true })} 
                 className="h-11 mt-auto placeholder:text-slate-300"
                 />
@@ -154,6 +157,7 @@ export function CreateMedicationForm({ onSuccess }: CreateMedicationFormProps) {
                       type="number" 
                       step="0.5" 
                       placeholder="0"
+                      autoComplete="off"
                       className="h-10 text-center bg-white placeholder:text-slate-300"
                       value={frequency[time === 'Morgens' ? 'morning' : time === 'Mittags' ? 'noon' : 'evening'] as string}
                       onChange={(e) => {
