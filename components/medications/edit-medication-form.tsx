@@ -176,11 +176,11 @@ export function EditMedicationForm({ medicationId, initialData, onSuccess }: Edi
           )}
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
             {/* Current Stock */}
-            <div className="flex flex-col gap-2 relative pb-6">
-                <Label htmlFor="stock">Aktueller Vorrat</Label>
-                <div className="flex gap-2">
+            <div className="flex flex-col relative pb-6 h-full">
+                <Label htmlFor="stock" className="mb-2">Aktueller Vorrat</Label>
+                <div className="flex gap-2 mt-auto">
                     <Input 
                         id="stock" 
                         type="number" 
@@ -209,14 +209,14 @@ export function EditMedicationForm({ medicationId, initialData, onSuccess }: Edi
             </div>
 
             {/* Daily Dosage */}
-            <div className="flex flex-col gap-2 relative pb-6">
-                <Label htmlFor="dosage">Tagesdosis (Gesamt)</Label>
+            <div className="flex flex-col relative pb-6 h-full">
+                <Label htmlFor="dosage" className="mb-2">Tagesdosis (Gesamt)</Label>
                 <Input 
                 id="dosage" 
                 type="number"
                 step="0.5" 
                 {...form.register('daily_dosage', { valueAsNumber: true })} 
-                className="h-11"
+                className="h-11 mt-auto"
                 />
                 {form.formState.errors.daily_dosage && (
                     <p className="text-xs text-red-500 absolute bottom-0 left-0">{form.formState.errors.daily_dosage.message}</p>
@@ -224,14 +224,14 @@ export function EditMedicationForm({ medicationId, initialData, onSuccess }: Edi
             </div>
 
             {/* Package Size */}
-            <div className="flex flex-col gap-2 relative pb-6">
-                <Label htmlFor="package_size">Packungsgröße</Label>
+            <div className="flex flex-col relative pb-6 h-full">
+                <Label htmlFor="package_size" className="mb-2">Packungsgröße</Label>
                 <Input 
                 id="package_size" 
                 type="number" 
                 placeholder="z.B. 20"
                 {...form.register('package_size', { valueAsNumber: true })} 
-                className="h-11"
+                className="h-11 mt-auto"
                 />
                 {form.formState.errors.package_size && (
                     <p className="text-xs text-red-500 absolute bottom-0 left-0">{form.formState.errors.package_size.message}</p>
