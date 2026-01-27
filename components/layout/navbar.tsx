@@ -7,11 +7,18 @@ import { signOut } from "@/app/login/actions"
 import type { User } from "@supabase/supabase-js"
 import { PushNotificationManager } from "@/components/dashboard/push-notification-manager"
 
-interface NavbarProps {
-  user: User
+interface Patient {
+    id: string
+    full_name: string | null
+    email: string | null
 }
 
-export function Navbar({ user }: NavbarProps) {
+interface NavbarProps {
+  user: User
+  patients?: Patient[]
+}
+
+export function Navbar({ user, patients = [] }: NavbarProps) {
   return (
     <nav className="border-b bg-white sticky top-0 z-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">

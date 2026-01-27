@@ -14,9 +14,28 @@ export default async function DashboardLayout({
     redirect('/login')
   }
 
+  // Fetch my patients (where I am caregiver)
+  const { data: relations } = await supabase
+    .from('care_relationships')
+    .select('patient_id')
+    .eq('caregiver_id', user.id)
+    .eq('status', 'accepted')
+
+  let patients: any[] = []
+  
+  if (relations && relations.length > 0) {
+      const patientIds = relations.map(r => r.patient_id)
+      const { data: profiles } = await supabase
+        .from('profiles')
+        .select('id, full_name, email')
+        .in('id', patientIds)
+      
+      patients = profiles || []
+  }
+
   return (
     <div className="min-h-screen bg-slate-50">
-      <Navbar user={user} />
+      <Navbar user={user} patients={patients} />
       <main>
         {children}
       </main>
