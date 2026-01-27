@@ -15,50 +15,12 @@ import {
 } from "@/components/ui/alert-dialog"
 
 export function PushNotificationManager() {
-  const { isSupported, subscription, subscribeToPush, sendTest, loading } = usePushNotifications()
-
-  if (loading) return <Button variant="ghost" size="sm" disabled><Loader2 className="h-4 w-4 animate-spin" /></Button>
-  
-  if (!isSupported) {
-    return (
-      <AlertDialog>
-        <AlertDialogTrigger asChild>
-          <Button variant="ghost" size="sm" className="text-slate-400 hover:text-slate-600 cursor-help">
-            <BellOff className="h-4 w-4 md:mr-2" />
-            <span className="hidden md:inline">Nicht verfügbar</span>
-          </Button>
-        </AlertDialogTrigger>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Push-Nachrichten nicht verfügbar</AlertDialogTitle>
-            <AlertDialogDescription className="space-y-2">
-              <p>Auf dem iPhone funktionieren Benachrichtigungen nur, wenn:</p>
-              <ul className="list-disc list-inside space-y-1">
-                <li>Du mindestens <strong>iOS 16.4</strong> hast.</li>
-                <li>Du diese Webseite über <strong>"Teilen" &rarr; "Zum Home-Bildschirm"</strong> installiert hast.</li>
-                <li>Du die App <strong>vom Home-Screen</strong> (nicht im Browser) startest.</li>
-              </ul>
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogAction className="bg-teal-600">Verstanden</AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-    )
-  }
-
   if (subscription) {
     return (
-      <div className="flex items-center space-x-2">
-        <Button variant="outline" size="sm" className="text-teal-700 bg-teal-50 border-teal-200 hover:bg-teal-100 cursor-default">
-            <Bell className="h-4 w-4 fill-teal-700 md:mr-2" />
-            <span className="hidden md:inline">Aktiv</span>
-        </Button>
-        <Button onClick={sendTest} variant="ghost" size="sm" className="text-slate-500 hover:text-slate-800" title="Test-Nachricht senden">
-            <span className="text-xs">Test</span>
-        </Button>
-      </div>
+      <Button variant="outline" size="sm" className="text-teal-700 bg-teal-50 border-teal-200 hover:bg-teal-100 cursor-default">
+        <Bell className="h-4 w-4 fill-teal-700 md:mr-2" />
+        <span className="hidden md:inline">Aktiv</span>
+      </Button>
     )
   }
 
