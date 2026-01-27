@@ -6,18 +6,13 @@ export default function PillLoader() {
       {/* Hier definieren wir die Animation lokal für diese Komponente. 
         Das macht den Code "Portable" (alles in einer Datei).
       */}
+      {/* Style-Block für die Animation */}
       <style>{`
         @keyframes runAround {
-          to {
-            /* Die Summe aus Strich (20) und Lücke (55) = 75. 
-               Das Minus sorgt für die Laufrichtung. */
-            stroke-dashoffset: -75;
-          }
+          to { stroke-dashoffset: -75; }
         }
         .pill-runner {
-          /* 20px Farbe, 55px Lücke (Transparent) */
           stroke-dasharray: 20 55;
-          /* Die Animation: 1.5 Sekunden, gleichmäßig, unendlich */
           animation: runAround 1.5s linear infinite;
         }
       `}</style>
@@ -36,7 +31,6 @@ export default function PillLoader() {
           strokeLinejoin="round"
           className="absolute inset-0 w-full h-full text-gray-200"
         >
-          {/* Eine einfache Form mit abgerundeten Ecken (Pille) */}
           <rect x="2" y="6" width="20" height="12" rx="6" />
         </svg>
 
@@ -49,10 +43,8 @@ export default function PillLoader() {
           strokeWidth="2.5"
           strokeLinecap="round"
           strokeLinejoin="round"
-          // Hier ändern wir die Farbe (z.B. dein Türkis)
           className="absolute inset-0 w-full h-full text-[#339989]"
         >
-          {/* Wir wenden unsere CSS-Klasse 'pill-runner' an */}
           <rect x="2" y="6" width="20" height="12" rx="6" className="pill-runner" />
         </svg>
 
