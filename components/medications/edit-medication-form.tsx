@@ -11,7 +11,7 @@ import { Calendar } from "@/components/ui/calendar"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { cn } from "@/lib/utils"
 import { format } from "date-fns"
-import { CalendarIcon, Loader2, Trash2 } from "lucide-react"
+import { CalendarIcon, Loader2, Trash2, Pencil } from "lucide-react"
 import { useState } from "react"
 
 export interface EditMedicationFormProps {
@@ -28,9 +28,9 @@ export interface EditMedicationFormProps {
   onSuccess: () => void
 }
 
-export function EditMedicationForm({ medicationId, initialData, onSuccess }: EditMedicationFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
+  const [isEditingName, setIsEditingName] = useState(false)
 
   const form = useForm<MedicationFormData>({
     resolver: zodResolver(MedicationFormSchema),
@@ -75,13 +75,42 @@ export function EditMedicationForm({ medicationId, initialData, onSuccess }: Edi
     <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 pt-4">
         {/* Name */}
         <div className="space-y-2">
+        {/* Name (Locked by default) */}
+        <div className="space-y-2">
             <Label htmlFor="name">Name des Medikaments</Label>
-            <Input 
-            id="name" 
-            placeholder="z.B. Ibuprofen 600" 
-            {...form.register('name')} 
-            className="h-11"
-            />
+            {!isEditingName ? (
+                <div className="flex items-center justify-between p-3 bg-slate-50 border border-slate-200 rounded-md">
+                    <span className="font-semibold text-slate-700">{form.getValues('name')}</span>
+                    <Button 
+                        type="button" 
+                        variant="ghost" 
+                        size="sm" 
+                        onClick={() => setIsEditingName(true)}
+                        className="h-8 w-8 p-0 text-slate-400 hover:text-teal-600 hover:bg-teal-50 cursor-pointer"
+                    >
+                        <Pencil className="h-4 w-4" />
+                        <span className="sr-only">Bearbeiten</span>
+                    </Button>
+                </div>
+            ) : (
+                <div className="flex gap-2">
+                    <Input 
+                        id="name" 
+                        placeholder="z.B. Ibuprofen 600" 
+                        {...form.register('name')} 
+                        className="h-11"
+                        autoFocus
+                    />
+                    <Button
+                        type="button"
+                        variant="ghost"
+                        onClick={() => setIsEditingName(false)}
+                        className="h-11 px-3"
+                    >
+                        Abbrechen
+                    </Button>
+                </div>
+            )}
             {form.formState.errors.name && <p className="text-sm text-red-500">{form.formState.errors.name.message}</p>}
         </div>
 
@@ -133,7 +162,7 @@ export function EditMedicationForm({ medicationId, initialData, onSuccess }: Edi
                 <Input 
                 id="package_size" 
                 type="number" 
-                placeholder="z.B. 20"
+                placeholder="z.B. 20 (ganze Packung)"
                 {...form.register('package_size', { valueAsNumber: true })} 
                 className="h-11"
                 />
@@ -146,7 +175,7 @@ export function EditMedicationForm({ medicationId, initialData, onSuccess }: Edi
             <Label htmlFor="frequency">Wie oft / Wann? (Optional)</Label>
             <Input 
             id="frequency" 
-            placeholder="z.B. Morgens 1, Abends 1" 
+            placeholder="z.B. Morgens 1, Abends 1/2" 
             {...form.register('frequency_note')} 
             className="h-11"
             />

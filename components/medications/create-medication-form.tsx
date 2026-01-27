@@ -89,7 +89,7 @@ export function CreateMedicationForm({ onSuccess }: CreateMedicationFormProps) {
                 <Input 
                 id="package_size" 
                 type="number" 
-                placeholder="z.B. 20"
+                placeholder="z.B. 20 (ganze Packung)"
                 {...form.register('package_size', { valueAsNumber: true })} 
                 className="h-11"
                 />
@@ -102,7 +102,7 @@ export function CreateMedicationForm({ onSuccess }: CreateMedicationFormProps) {
             <Label htmlFor="frequency">Wie oft / Wann? (Optional)</Label>
             <Input 
             id="frequency" 
-            placeholder="z.B. Morgens 1, Abends 1" 
+            placeholder="z.B. Morgens 1, Abends 1/2" 
             {...form.register('frequency_note')} 
             className="h-11"
             />
