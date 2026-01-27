@@ -3,8 +3,9 @@ import { getCareNetwork, inviteCaregiver, removeCaregiver, acceptCareInvitation 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
-import { Plus, Trash2, Check, UserPlus } from 'lucide-react'
+import { Plus, Trash2, Check, UserPlus, ArrowLeft } from 'lucide-react'
 import { revalidatePath } from 'next/cache'
+import Link from 'next/link'
 
 export default async function CareTeamPage() {
   const { myCaregivers = [], myPatients = [] } = await getCareNetwork()
@@ -28,9 +29,17 @@ export default async function CareTeamPage() {
 
   return (
     <div className="p-8 max-w-4xl mx-auto space-y-8">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight text-slate-900">Mein Care-Team</h1>
-        <p className="text-slate-500">Verwalte hier, wer Zugriff auf deine Medikation hat.</p>
+      <div className="flex flex-col gap-4">
+        <Link href="/dashboard">
+            <Button variant="ghost" size="sm" className="pl-0 text-slate-500 hover:text-slate-900 -ml-2">
+                <ArrowLeft className="h-4 w-4 mr-1" />
+                Zurück zum Dashboard
+            </Button>
+        </Link>
+        <div>
+            <h1 className="text-3xl font-bold tracking-tight text-slate-900">Mein Care-Team</h1>
+            <p className="text-slate-500">Verwalte hier, wer Zugriff auf deine Medikation hat.</p>
+        </div>
       </div>
 
       <div className="grid gap-6 md:grid-cols-2">
