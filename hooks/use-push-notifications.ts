@@ -63,9 +63,9 @@ export function usePushNotifications() {
       await subscribeUser(subJson)
       setSubscription(sub)
       alert("Erfolgreich aktiviert! 🎉")
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to subscribe:', error)
-      alert("Fehler beim Aktivieren. Bitte prüfe deine Einstellungen.")
+      alert(`Fehler beim Aktivieren: ${error.message || 'Unbekannter Fehler'}`)
     }
   }
 
