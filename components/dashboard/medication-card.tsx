@@ -51,30 +51,33 @@ export function MedicationCard({
   let iconColor = "text-emerald-500"
   let iconBg = "bg-emerald-50"
   let progressColor = "bg-emerald-500"
-  let daysLeftColor = "text-emerald-600"
-  let statusText = `${daysLeft} Tage verbleibend`
+  let daysLeftColor = "text-emerald-600 border-emerald-200 bg-emerald-50"
+  
+  // Default Text
+  let statusText = `${daysLeft} Tage (${current_stock} Stk.)`
 
-  if (status === 'warning') {
-    StatusIcon = AlertTriangle
-    iconColor = "text-amber-500"
-    iconBg = "bg-amber-50"
-    progressColor = "bg-amber-400"
-    daysLeftColor = "text-amber-600"
-  } else if (status === 'critical') {
-    StatusIcon = AlertCircle
-    iconColor = "text-rose-500"
-    iconBg = "bg-rose-50"
-    progressColor = "bg-rose-500"
-    daysLeftColor = "text-rose-600"
-    statusText = "Nachfüllen erforderlich"
-  } else if (status === 'expired') {
+  // Logic based on User Request: < 8 Red, < 15 Yellow
+  if (status === 'expired') {
     StatusIcon = AlertCircle
     iconColor = "text-red-700"
     iconBg = "bg-red-100"
     progressColor = "bg-red-700"
-    daysLeftColor = "text-red-700 font-bold"
+    daysLeftColor = "text-red-700 font-bold border-red-200 bg-red-50"
     statusText = "ABGELAUFEN"
+  } else if (daysLeft < 8) {
+    StatusIcon = AlertCircle
+    iconColor = "text-rose-500"
+    iconBg = "bg-rose-50"
+    progressColor = "bg-rose-500"
+    daysLeftColor = "text-rose-600 font-medium border-rose-200 bg-rose-50"
+  } else if (daysLeft < 15) {
+     StatusIcon = AlertTriangle
+     iconColor = "text-amber-500"
+     iconBg = "bg-amber-50"
+     progressColor = "bg-amber-400"
+     daysLeftColor = "text-amber-600 font-medium border-amber-200 bg-amber-50"
   }
+   // Else Green (Default)
 
   return (
     <>
@@ -96,10 +99,8 @@ export function MedicationCard({
           <div className="space-y-3 mt-6">
             <div className="flex justify-between text-sm font-medium">
               <span className="text-slate-600">Vorrat</span>
-              <span className={daysLeftColor}>
-              <span className={daysLeftColor}>
+              <span className={cn("px-2 py-0.5 rounded-md text-xs border", daysLeftColor)}>
                   {statusText}
-              </span>
               </span>
             </div>
             <Progress value={stockLevel} className="h-2" indicatorClassName={progressColor} />
