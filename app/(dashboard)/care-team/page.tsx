@@ -7,7 +7,7 @@ import { Plus, Trash2, Check, UserPlus } from 'lucide-react'
 import { revalidatePath } from 'next/cache'
 
 export default async function CareTeamPage() {
-  const { myCaregivers, myPatients } = await getCareNetwork()
+  const { myCaregivers = [], myPatients = [] } = await getCareNetwork()
   const supabase = await createClient()
   const runInvite = async (formData: FormData) => {
     'use server'
