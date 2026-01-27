@@ -32,7 +32,7 @@ export function Navbar({ user, patients = [] }: NavbarProps) {
           </div>
           <div className="flex items-center space-x-4">
             <Link href="/dashboard/care-team" title="Care Team verwalten">
-                <Button variant="ghost" size="sm" className="hidden sm:flex text-slate-500 hover:text-slate-900">
+                <Button variant="ghost" size="sm" className="hidden sm:flex text-slate-500 hover:text-slate-900 cursor-pointer">
                     <Users className="h-5 w-5 mr-2" />
                     <span className="hidden lg:inline">Team</span>
                 </Button>
