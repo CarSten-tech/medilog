@@ -1,6 +1,6 @@
 'use client'
 
-import { Pill, LogOut } from "lucide-react"
+import { Pill, LogOut, Users } from "lucide-react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { signOut } from "@/app/login/actions"
@@ -23,6 +23,12 @@ export function Navbar({ user }: NavbarProps) {
             </Link>
           </div>
           <div className="flex items-center space-x-4">
+            <Link href="/dashboard/care" title="Care Team verwalten">
+                <Button variant="ghost" size="sm" className="hidden sm:flex text-slate-500 hover:text-slate-900 cursor-pointer">
+                    <Users className="h-5 w-5 mr-2" />
+                    <span className="hidden lg:inline">Team</span>
+                </Button>
+            </Link>
              <span>
                 <PushNotificationManager />
             </span>
