@@ -59,7 +59,7 @@ export function SettingsDialog({ initialChatId }: SettingsDialogProps) {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button variant="ghost" size="icon">
+        <Button variant="ghost" size="icon" className="cursor-pointer">
           <Settings className="h-5 w-5 text-slate-500" />
           <span className="sr-only">Settings</span>
         </Button>
@@ -94,7 +94,7 @@ export function SettingsDialog({ initialChatId }: SettingsDialogProps) {
                     </FormItem>
                   )}
                 />
-                <Button type="submit" disabled={form.formState.isSubmitting}>
+                <Button type="submit" disabled={form.formState.isSubmitting} className="cursor-pointer">
                   {form.formState.isSubmitting && (
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   )}

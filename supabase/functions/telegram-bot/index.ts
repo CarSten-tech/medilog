@@ -31,7 +31,8 @@ Deno.serve(async (req) => {
     return new Response('OK', { headers: { 'Content-Type': 'text/plain' } })
   } catch (error) {
     console.error('Error handling request:', error)
-    return new Response('Internal Server Error', { status: 500 })
+    const requestId = req.headers.get('x-sb-request-id') ?? 'unknown'
+    return new Response(`Internal Server Error: ${(error as Error).message} (Req ID: ${requestId})`, { status: 500 })
   }
 })
 
@@ -77,7 +78,9 @@ async function handleStatus(chatId: number) {
 async function sendMessage(chatId: number, text: string) {
   const url = `https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`
   
-  await fetch(url, {
+  console.log(`Sending message to ${chatId} via ${url.replace(BOT_TOKEN, 'HIDDEN_TOKEN')}`)
+
+  const res = await fetch(url, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
@@ -86,4 +89,10 @@ async function sendMessage(chatId: number, text: string) {
       parse_mode: 'Markdown'
     })
   })
+
+  if (!res.ok) {
+    const errorText = await res.text()
+    console.error(`Telegram API Error: ${res.status} ${errorText}`)
+    throw new Error(`Telegram API Error: ${errorText}`)
+  }
 }

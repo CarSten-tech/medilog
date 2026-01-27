@@ -29,7 +29,7 @@ export function Navbar({ user, telegramChatId }: NavbarProps) {
             </span>
             <SettingsDialog initialChatId={telegramChatId} />
             <form action={signOut}>
-                <Button variant="ghost" size="icon" className="text-slate-500 hover:text-red-600">
+                <Button variant="ghost" size="icon" className="text-slate-500 hover:text-red-600 cursor-pointer">
                   <LogOut className="h-5 w-5" />
                   <span className="sr-only">Abmelden</span>
                 </Button>
