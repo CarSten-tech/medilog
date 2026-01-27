@@ -42,6 +42,14 @@ export function CreateMedicationForm({ onSuccess }: CreateMedicationFormProps) {
     }
   })
 
+  const [frequency, setFrequency] = useState({ morning: '', noon: '', evening: '' })
+
+  const updateFrequencyNote = (newFreq: typeof frequency) => {
+    const note = `Morgens: ${newFreq.morning || 0}, Mittags: ${newFreq.noon || 0}, Abends: ${newFreq.evening || 0}`
+    form.setValue('frequency_note', note)
+    setFrequency(newFreq)
+  }
+
   const handlePreSubmit = async (data: MedicationFormData) => {
     setIsSubmitting(true)
     try {
@@ -127,15 +135,29 @@ export function CreateMedicationForm({ onSuccess }: CreateMedicationFormProps) {
             </div>
         </div>
 
-        {/* Frequency Note */}
-        <div className="space-y-2">
-            <Label htmlFor="frequency">Wie oft / Wann? (Optional)</Label>
-            <Input 
-            id="frequency" 
-            placeholder="z.B. Morgens 1, Abends 1/2" 
-            {...form.register('frequency_note')} 
-            className="h-11"
-            />
+        {/* Frequency 3-Slot Input (Morgens, Mittags, Abends) */}
+        <div className="space-y-3 p-4 bg-slate-50 rounded-lg border border-slate-100">
+            <Label className="text-base font-semibold text-slate-700">Wann wird eingenommen?</Label>
+            <div className="grid grid-cols-3 gap-2">
+              {['Morgens', 'Mittags', 'Abends'].map((time) => (
+                 <div key={time} className="space-y-1">
+                    <Label className="text-xs text-slate-500 font-medium uppercase tracking-wider">{time}</Label>
+                    <Input 
+                      type="number" 
+                      step="0.5" 
+                      placeholder="0"
+                      className="h-10 text-center bg-white"
+                      value={frequency[time === 'Morgens' ? 'morning' : time === 'Mittags' ? 'noon' : 'evening'] as string}
+                      onChange={(e) => {
+                         const val = e.target.value
+                         const field = time === 'Morgens' ? 'morning' : time === 'Mittags' ? 'noon' : 'evening'
+                         updateFrequencyNote({ ...frequency, [field]: val })
+                      }}
+                    />
+                 </div>
+              ))}
+            </div>
+            <input type="hidden" {...form.register('frequency_note')} />
         </div>
 
         {/* Expiry Date */}
