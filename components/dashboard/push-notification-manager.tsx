@@ -1,5 +1,7 @@
 'use client'
 
+import { Button } from "@/components/ui/button"
+import { usePushNotifications } from "@/hooks/use-push-notifications"
 import { Bell, BellOff, Loader2, HelpCircle } from "lucide-react"
 import {
   AlertDialog,
@@ -48,10 +50,15 @@ export function PushNotificationManager() {
 
   if (subscription) {
     return (
-      <Button variant="outline" size="sm" className="text-teal-700 bg-teal-50 border-teal-200 hover:bg-teal-100 cursor-default">
-        <Bell className="h-4 w-4 fill-teal-700 md:mr-2" />
-        <span className="hidden md:inline">Aktiv</span>
-      </Button>
+      <div className="flex items-center space-x-2">
+        <Button variant="outline" size="sm" className="text-teal-700 bg-teal-50 border-teal-200 hover:bg-teal-100 cursor-default">
+            <Bell className="h-4 w-4 fill-teal-700 md:mr-2" />
+            <span className="hidden md:inline">Aktiv</span>
+        </Button>
+        <Button onClick={sendTest} variant="ghost" size="sm" className="text-slate-500 hover:text-slate-800" title="Test-Nachricht senden">
+            <span className="text-xs">Test</span>
+        </Button>
+      </div>
     )
   }
 
