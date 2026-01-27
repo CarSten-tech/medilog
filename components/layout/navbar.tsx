@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button"
 import { signOut } from "@/app/login/actions"
 import type { User } from "@supabase/supabase-js"
 import { PushNotificationManager } from "@/components/dashboard/push-notification-manager"
+import { PatientSwitcher } from "@/components/dashboard/patient-switcher"
 
 interface Patient {
     id: string
@@ -30,6 +31,9 @@ export function Navbar({ user, patients = [] }: NavbarProps) {
             </Link>
           </div>
           <div className="flex items-center space-x-4">
+            {patients.length > 0 && (
+                <PatientSwitcher patients={patients} currentUser={{ id: user.id || '', email: user.email }} />
+            )}
             <Link href="/dashboard/care" title="Care Team verwalten">
                 <Button variant="ghost" size="sm" className="hidden sm:flex text-slate-500 hover:text-slate-900 cursor-pointer">
                     <Users className="h-5 w-5 mr-2" />
