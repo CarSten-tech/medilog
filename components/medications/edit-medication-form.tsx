@@ -50,18 +50,17 @@ export function EditMedicationForm({ medicationId, initialData, onSuccess }: Edi
   const [pendingData, setPendingData] = useState<MedicationFormData | null>(null)
 
   // Frequency State (Parse initial string or default to 0)
-  // Format: "M: 1, M: 0, A: 1, N: 0"
+  // Format: "M: 1, M: 0, A: 1"
   const parseFrequency = (note: string = '') => {
-    const parts = note.match(/Morgens: ([\d.]+), Mittags: ([\d.]+), Abends: ([\d.]+), Nachts: ([\d.]+)/)
+    const parts = note.match(/Morgens: ([\d.]+), Mittags: ([\d.]+), Abends: ([\d.]+)/)
     if (parts) {
       return {
         morning: parts[1],
         noon: parts[2],
-        evening: parts[3],
-        night: parts[4]
+        evening: parts[3]
       }
     }
-    return { morning: '', noon: '', evening: '', night: '' }
+    return { morning: '', noon: '', evening: '' }
   }
 
   const [frequency, setFrequency] = useState(parseFrequency(initialData.frequency_note || ''))
@@ -81,7 +80,7 @@ export function EditMedicationForm({ medicationId, initialData, onSuccess }: Edi
 
   // Update hidden frequency_note field when inputs change
   const updateFrequencyNote = (newFreq: typeof frequency) => {
-    const note = `Morgens: ${newFreq.morning || 0}, Mittags: ${newFreq.noon || 0}, Abends: ${newFreq.evening || 0}, Nachts: ${newFreq.night || 0}`
+    const note = `Morgens: ${newFreq.morning || 0}, Mittags: ${newFreq.noon || 0}, Abends: ${newFreq.evening || 0}`
     form.setValue('frequency_note', note)
     setFrequency(newFreq)
   }
@@ -130,6 +129,10 @@ export function EditMedicationForm({ medicationId, initialData, onSuccess }: Edi
       setShowDeleteDialog(false)
     }
   }
+
+  // Safe check for package size to avoid rendering "NaN"
+  const packageSize = form.watch('package_size')
+  const hasValidPackageSize = typeof packageSize === 'number' && !isNaN(packageSize) && packageSize > 0
 
   return (
     <>
@@ -185,7 +188,7 @@ export function EditMedicationForm({ medicationId, initialData, onSuccess }: Edi
                         className="h-11"
                     />
                     {/* NaN Fix: Only show button if package_size is a valid number > 0 */}
-                    {form.watch('package_size') && !isNaN(form.watch('package_size')!) && form.watch('package_size')! > 0 && (
+                    {hasValidPackageSize && (
                         <Button 
                             type="button" 
                             variant="outline" 
@@ -196,7 +199,7 @@ export function EditMedicationForm({ medicationId, initialData, onSuccess }: Edi
                                 form.setValue('current_stock', current + size)
                             }}
                         >
-                            +{form.watch('package_size')}
+                            +{packageSize}
                         </Button>
                     )}
                 </div>
@@ -230,11 +233,11 @@ export function EditMedicationForm({ medicationId, initialData, onSuccess }: Edi
             </div>
         </div>
 
-        {/* Frequency 4-Slot Input */}
+        {/* Frequency 3-Slot Input (Morgens, Mittags, Abends) */}
         <div className="space-y-3 p-4 bg-slate-50 rounded-lg border border-slate-100">
             <Label className="text-base font-semibold text-slate-700">Wann wird eingenommen?</Label>
-            <div className="grid grid-cols-4 gap-2">
-              {['Morgens', 'Mittags', 'Abends', 'Nachts'].map((time) => (
+            <div className="grid grid-cols-3 gap-2">
+              {['Morgens', 'Mittags', 'Abends'].map((time) => (
                  <div key={time} className="space-y-1">
                     <Label className="text-xs text-slate-500 font-medium uppercase tracking-wider">{time}</Label>
                     <Input 
@@ -242,10 +245,10 @@ export function EditMedicationForm({ medicationId, initialData, onSuccess }: Edi
                       step="0.5" 
                       placeholder="0"
                       className="h-10 text-center bg-white"
-                      value={frequency[time === 'Morgens' ? 'morning' : time === 'Mittags' ? 'noon' : time === 'Abends' ? 'evening' : 'night'] as string}
+                      value={frequency[time === 'Morgens' ? 'morning' : time === 'Mittags' ? 'noon' : 'evening'] as string}
                       onChange={(e) => {
                          const val = e.target.value
-                         const field = time === 'Morgens' ? 'morning' : time === 'Mittags' ? 'noon' : time === 'Abends' ? 'evening' : 'night'
+                         const field = time === 'Morgens' ? 'morning' : time === 'Mittags' ? 'noon' : 'evening'
                          updateFrequencyNote({ ...frequency, [field]: val })
                       }}
                     />
