@@ -2,8 +2,18 @@
 
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
-import { createMedication } from "@/app/medications/actions"
+import { createMedication, checkMedicationName } from "@/app/medications/actions"
 import { MedicationFormSchema, type MedicationFormData } from "@/app/medications/schema"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -20,6 +30,8 @@ interface CreateMedicationFormProps {
 
 export function CreateMedicationForm({ onSuccess }: CreateMedicationFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [showDuplicateDialog, setShowDuplicateDialog] = useState(false)
+  const [pendingData, setPendingData] = useState<MedicationFormData | null>(null)
 
   const form = useForm<MedicationFormData>({
     resolver: zodResolver(MedicationFormSchema),
@@ -30,21 +42,39 @@ export function CreateMedicationForm({ onSuccess }: CreateMedicationFormProps) {
     }
   })
 
-  const onSubmit = async (data: MedicationFormData) => {
+  const handlePreSubmit = async (data: MedicationFormData) => {
     setIsSubmitting(true)
     try {
-      const result = await createMedication(data)
-      // If we assume success or check result.success
+      // Check for duplicates
+      const exists = await checkMedicationName(data.name)
+      if (exists) {
+        setPendingData(data)
+        setShowDuplicateDialog(true)
+        setIsSubmitting(false)
+        return
+      }
+      await performCreate(data)
+    } catch (error) {
+      console.error(error)
+      setIsSubmitting(false)
+    }
+  }
+
+  const performCreate = async (data: MedicationFormData) => {
+    try {
+      await createMedication(data)
       onSuccess()
     } catch (error) {
       console.error(error)
     } finally {
       setIsSubmitting(false)
+      setShowDuplicateDialog(false)
     }
   }
 
   return (
-    <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 pt-4">
+    <>
+      <form onSubmit={form.handleSubmit(handlePreSubmit)} className="space-y-6 pt-4">
         {/* Name */}
         <div className="space-y-2">
             <Label htmlFor="name">Name des Medikaments</Label>
@@ -151,6 +181,25 @@ export function CreateMedicationForm({ onSuccess }: CreateMedicationFormProps) {
                 ) : 'Speichern'}
             </Button>
         </div>
-    </form>
+      </form>
+
+      {/* Duplicate Warning Dialog */}
+      <AlertDialog open={showDuplicateDialog} onOpenChange={setShowDuplicateDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Doppelter Name erkannt</AlertDialogTitle>
+            <AlertDialogDescription>
+              Ein Medikament mit dem Namen "{pendingData?.name}" existiert bereits. Möchtest du es trotzdem erstellen?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setIsSubmitting(false)}>Abbrechen</AlertDialogCancel>
+            <AlertDialogAction onClick={() => pendingData && performCreate(pendingData)} className="bg-teal-600 hover:bg-teal-700">
+              Trotzdem erstellen
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   )
 }
