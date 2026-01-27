@@ -1,4 +1,5 @@
 import { Navbar } from '@/components/layout/navbar'
+import { BreadcrumbNav } from '@/components/layout/breadcrumb-nav'
 import { createClient } from '@/utils/supabase/server'
 import { redirect } from 'next/navigation'
 
@@ -37,6 +38,7 @@ export default async function DashboardLayout({
     <div className="min-h-screen bg-slate-50">
       <Navbar user={user} patients={patients} />
       <main>
+        <BreadcrumbNav />
         {children}
       </main>
     </div>
