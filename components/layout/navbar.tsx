@@ -23,7 +23,7 @@ export function Navbar({ user }: NavbarProps) {
             </Link>
           </div>
           <div className="flex items-center space-x-4">
-             <span className="hidden md:inline-block">
+             <span>
                 <PushNotificationManager />
             </span>
             <span className="text-sm font-medium text-slate-600 hidden sm:inline-block">
