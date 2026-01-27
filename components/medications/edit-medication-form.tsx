@@ -148,7 +148,7 @@ export function EditMedicationForm({ medicationId, initialData, onSuccess }: Edi
                 variant="ghost" 
                 size="icon"
                 onClick={() => setIsEditingName(true)}
-                className="h-8 w-8 text-slate-400 hover:text-teal-600 hover:bg-teal-50 rounded-full"
+                className="h-8 w-8 text-slate-400 hover:text-teal-600 hover:bg-teal-50 rounded-full cursor-pointer"
               >
                 <Pencil className="h-4 w-4" />
                 <span className="sr-only">Name bearbeiten</span>
@@ -176,11 +176,11 @@ export function EditMedicationForm({ medicationId, initialData, onSuccess }: Edi
           )}
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
             {/* Current Stock */}
-            <div className="flex flex-col gap-2 sm:h-full">
+            <div className="flex flex-col gap-2 relative pb-6">
                 <Label htmlFor="stock">Aktueller Vorrat</Label>
-                <div className="flex gap-2 mt-auto">
+                <div className="flex gap-2">
                     <Input 
                         id="stock" 
                         type="number" 
@@ -203,33 +203,39 @@ export function EditMedicationForm({ medicationId, initialData, onSuccess }: Edi
                         </Button>
                     )}
                 </div>
-                {form.formState.errors.current_stock && <p className="text-sm text-red-500">{form.formState.errors.current_stock.message}</p>}
+                {form.formState.errors.current_stock && (
+                    <p className="text-xs text-red-500 absolute bottom-0 left-0">{form.formState.errors.current_stock.message}</p>
+                )}
             </div>
 
             {/* Daily Dosage */}
-            <div className="flex flex-col gap-2 sm:h-full">
+            <div className="flex flex-col gap-2 relative pb-6">
                 <Label htmlFor="dosage">Tagesdosis (Gesamt)</Label>
                 <Input 
                 id="dosage" 
                 type="number"
                 step="0.5" 
                 {...form.register('daily_dosage', { valueAsNumber: true })} 
-                className="h-11 mt-auto"
+                className="h-11"
                 />
-                {form.formState.errors.daily_dosage && <p className="text-sm text-red-500">{form.formState.errors.daily_dosage.message}</p>}
+                {form.formState.errors.daily_dosage && (
+                    <p className="text-xs text-red-500 absolute bottom-0 left-0">{form.formState.errors.daily_dosage.message}</p>
+                )}
             </div>
 
             {/* Package Size */}
-            <div className="flex flex-col gap-2 sm:h-full">
+            <div className="flex flex-col gap-2 relative pb-6">
                 <Label htmlFor="package_size">Packungsgröße</Label>
                 <Input 
                 id="package_size" 
                 type="number" 
                 placeholder="z.B. 20"
                 {...form.register('package_size', { valueAsNumber: true })} 
-                className="h-11 mt-auto"
+                className="h-11"
                 />
-                {form.formState.errors.package_size && <p className="text-sm text-red-500">{form.formState.errors.package_size.message}</p>}
+                {form.formState.errors.package_size && (
+                    <p className="text-xs text-red-500 absolute bottom-0 left-0">{form.formState.errors.package_size.message}</p>
+                )}
             </div>
         </div>
 
@@ -295,13 +301,13 @@ export function EditMedicationForm({ medicationId, initialData, onSuccess }: Edi
                 type="button"
                 variant="ghost"
                 onClick={() => setShowDeleteDialog(true)}
-                className="text-red-500 hover:text-red-600 hover:bg-red-50"
+                className="text-red-500 hover:text-red-600 hover:bg-red-50 cursor-pointer"
             >
                 Medikament löschen
             </Button>
             <Button 
                 type="submit" 
-                className="bg-teal-600 hover:bg-teal-700 text-white min-w-[140px]"
+                className="bg-teal-600 hover:bg-teal-700 text-white min-w-[140px] cursor-pointer"
                 disabled={isSubmitting}
             >
                 {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}

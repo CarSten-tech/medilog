@@ -56,7 +56,14 @@ export async function checkMedicationName(name: string, excludeId?: string) {
     query = query.neq('id', excludeId)
   }
 
-  const { data } = await query.single()
+  // Use maybeSingle to avoid error if no match found (returns null data instead of throwing)
+  const { data, error } = await query.maybeSingle()
+  
+  if (error) {
+    console.error('Error checking duplicate name:', error)
+    return false
+  }
+
   return !!data
 }
 
