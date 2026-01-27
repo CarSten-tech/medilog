@@ -174,6 +174,35 @@ export async function deductWeeklyRation() {
 
   await Promise.all(updates)
 
+  // --- Push Logic ---
+  try {
+      const { data: freshMeds } = await supabase
+        .from('medications')
+        .select('name, current_stock, daily_dosage')
+        .eq('user_id', user.id)
+
+      if (freshMeds && freshMeds.length > 0) {
+          const inventoryReport: string[] = []
+          for (const med of freshMeds) {
+              if (med.daily_dosage > 0) {
+                  const daysLeft = Math.floor(med.current_stock / med.daily_dosage)
+                  inventoryReport.push(`${med.name}: ${med.current_stock} Stk (${daysLeft} Tage)`)
+              }
+          }
+          if (inventoryReport.length > 0) {
+              const { sendNotificationToUser } = await import('@/app/actions/push')
+              await sendNotificationToUser(
+                  user.id, 
+                  'Wochenration gestellt! ✅',
+                  `Hier ist dein aktueller Vorrat:\n\n${inventoryReport.join('\n')}`
+              )
+          }
+      }
+  } catch (e) {
+      console.error("Push failed in deductWeeklyRation", e)
+  }
+  // ------------------
+
   revalidatePath('/dashboard')
   return { success: true }
 }

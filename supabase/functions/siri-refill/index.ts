@@ -1,5 +1,6 @@
 // @ts-nocheck
 import { createClient } from 'jsr:@supabase/supabase-js@2'
+import webpush from "npm:web-push@3.6.7"
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -23,13 +24,11 @@ Deno.serve(async (req: Request) => {
         throw new Error('Missing user_id')
     }
 
-    // 1. Fetch ALL active medications for this user
+    // 1. Fetch Medications
     const { data: medications, error: fetchError } = await supabase
       .from('medications')
       .select('id, name, current_stock, daily_dosage')
       .eq('user_id', user_id)
-      // Removed .gt('current_stock', 0) to allow filling even if stock is technically 0/negative in DB
-      // assuming user has physical access to meds.
 
     if (fetchError) throw fetchError
 
@@ -43,19 +42,15 @@ Deno.serve(async (req: Request) => {
     let updatedCount = 0;
     const errors: string[] = [];
     const updatedNames: string[] = [];
+    const inventoryReport: string[] = [];
 
     // 2. Process each medication
     for (const med of medications) {
-        // Calculate weekly amount
-        // daily_dosage is per day. Weekly need = daily * 7.
         const weeklyAmount = Number(med.daily_dosage) * 7
-        
-        // Skip if dosage is 0
         if (weeklyAmount <= 0) continue;
 
         const newStock = Number(med.current_stock) - weeklyAmount
 
-        // Update Stock
         const { error: updateError } = await supabase
             .from('medications')
             .update({ current_stock: newStock })
@@ -69,17 +64,50 @@ Deno.serve(async (req: Request) => {
             updatedNames.push(med.name)
             
             // Log Intake
-            const { error: logError } = await supabase.from('intake_logs').insert({
+            await supabase.from('intake_logs').insert({
                 medication_id: med.id,
                 taken_at: new Date().toISOString(),
                 status: 'taken'
             })
-            
-            if (logError) console.error("Log error", logError)
+
+            // Inventory Calc
+            if (med.daily_dosage > 0) {
+                const daysLeft = Math.floor(newStock / med.daily_dosage);
+                inventoryReport.push(`${med.name}: ${newStock} Stk (${daysLeft} Tage)`);
+            }
         }
     }
 
-    // 3. Return Summary (Text only for Siri)
+    // 3. Send Push Notification
+    if (updatedCount > 0) {
+        const { data: subs } = await supabase
+            .from('push_subscriptions')
+            .select('*')
+            .eq('user_id', user_id)
+
+        if (subs && subs.length > 0) {
+            webpush.setVapidDetails(
+                Deno.env.get('VAPID_SUBJECT')!,
+                Deno.env.get('VAPID_PUBLIC_KEY')!,
+                Deno.env.get('VAPID_PRIVATE_KEY')!
+            );
+
+            const pushMessage = `Wochenration gestellt!\n\n${inventoryReport.join('\n')}`;
+
+            for (const sub of subs) {
+                try {
+                    await webpush.sendNotification(
+                        { endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } },
+                        JSON.stringify({ title: 'MediLog Status', body: pushMessage })
+                    );
+                } catch (e) {
+                    console.error("Push failed", e);
+                }
+            }
+        }
+    }
+
+    // 4. Return Summary (Text only for Siri)
     const nameList = updatedNames.join(', ');
     return new Response(
       `Erledigt. Wochenration für ${updatedCount} Medikamente gestellt: ${nameList}.`,

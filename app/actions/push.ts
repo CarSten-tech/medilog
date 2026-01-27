@@ -40,19 +40,17 @@ export async function subscribeUser(sub: PushSubscriptionData) {
   return { success: true }
 }
 
-export async function sendTestNotification(message: string) {
+// Core logic: Send to a specific user ID
+export async function sendNotificationToUser(userId: string, title: string, message: string) {
     const supabase = await createClient()
-    const { data: { user } } = await supabase.auth.getUser()
-    
-    if (!user) return { success: false, error: 'Not authenticated' }
 
     const { data: subs, error } = await supabase
         .from('push_subscriptions')
         .select('*')
-        .eq('user_id', user.id)
+        .eq('user_id', userId)
 
     if (error || !subs || subs.length === 0) {
-        console.log("No subs found for", user.id)
+        console.log("No subs found for", userId)
         return { success: false, error: 'No subscriptions found' }
     }
 
@@ -67,7 +65,7 @@ export async function sendTestNotification(message: string) {
                     }
                 },
                 JSON.stringify({
-                    title: 'MediLog',
+                    title: title,
                     body: message,
                 })
             )
@@ -79,4 +77,14 @@ export async function sendTestNotification(message: string) {
     }))
     
     return { results }
+}
+
+// Wrapper for frontend "Test" button (infers user from session)
+export async function sendTestNotification(message: string) {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    
+    if (!user) return { success: false, error: 'Not authenticated' }
+    
+    return sendNotificationToUser(user.id, 'MediLog Test', message)
 }
