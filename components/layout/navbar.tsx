@@ -1,16 +1,18 @@
 'use client'
 
-import { Pill, LogOut } from "lucide-react"
+import { Pill, LogOut, Settings } from "lucide-react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { signOut } from "@/app/login/actions"
 import type { User } from "@supabase/supabase-js"
+import { SettingsDialog } from "@/components/dashboard/settings-dialog"
 
 interface NavbarProps {
   user: User
+  telegramChatId?: string | null
 }
 
-export function Navbar({ user }: NavbarProps) {
+export function Navbar({ user, telegramChatId }: NavbarProps) {
   return (
     <nav className="border-b bg-white sticky top-0 z-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -21,14 +23,15 @@ export function Navbar({ user }: NavbarProps) {
               <span className="font-bold text-xl tracking-tight text-slate-900">MediLog</span>
             </Link>
           </div>
-          <div className="flex items-center space-x-4">
-            <span className="text-sm font-medium text-slate-600">
+          <div className="flex items-center space-x-2">
+            <span className="text-sm font-medium text-slate-600 hidden sm:inline-block mr-2">
               {user.email}
             </span>
+            <SettingsDialog initialChatId={telegramChatId} />
             <form action={signOut}>
-                <Button variant="outline" size="sm" className="bg-white text-slate-700 border-slate-200 hover:bg-slate-50 hover:text-red-600 cursor-pointer">
-                  <LogOut className="h-4 w-4 mr-2" />
-                  Abmelden
+                <Button variant="ghost" size="icon" className="text-slate-500 hover:text-red-600">
+                  <LogOut className="h-5 w-5" />
+                  <span className="sr-only">Abmelden</span>
                 </Button>
             </form>
           </div>
