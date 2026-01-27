@@ -16,7 +16,18 @@ export default async function DashboardLayout({
 
   // Fetch care network
   const { getCareNetwork } = await import('@/app/actions/caregiver')
-  const { myPatients = [] } = await getCareNetwork()
+  
+  let myPatients = [] as any[]
+  
+  try {
+    const res = await getCareNetwork()
+    if (res?.myPatients) {
+        myPatients = res.myPatients
+    }
+  } catch (err) {
+      console.error("Failed to load care network:", err)
+      // Non-critical: Continue without patients
+  }
 
   // Map to simpler structure if needed, or pass as is.
   // PatientSwitcher expects: { id: string, first_name: string | null, last_name: string | null, email: string | null }
