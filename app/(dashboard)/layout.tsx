@@ -14,15 +14,9 @@ export default async function DashboardLayout({
     redirect('/login')
   }
 
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('telegram_chat_id')
-    .eq('id', user.id)
-    .single()
-
   return (
     <div className="min-h-screen bg-slate-50">
-      <Navbar user={user} telegramChatId={profile?.telegram_chat_id} />
+      <Navbar user={user} />
       <main>
         {children}
       </main>
