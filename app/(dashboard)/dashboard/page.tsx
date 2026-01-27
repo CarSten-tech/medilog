@@ -5,11 +5,10 @@ import { WeeklyRefillButton } from "@/components/dashboard/weekly-refill-button"
 import { getPendingInvites } from '@/app/actions/care'
 import { InviteAlert } from '@/components/dashboard/invite-alert'
 
-export default async function DashboardPage({
-  searchParams,
-}: {
-  searchParams: { [key: string]: string | string[] | undefined }
+export default async function DashboardPage(props: {
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>
 }) {
+  const searchParams = await props.searchParams
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
 
