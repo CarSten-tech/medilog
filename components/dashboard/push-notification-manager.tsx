@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/alert-dialog"
 
 export function PushNotificationManager() {
-  const { isSupported, subscription, subscribeToPush, loading } = usePushNotifications()
+  const { isSupported, subscription, subscribeToPush, sendTest, loading } = usePushNotifications()
 
   if (loading) return <Button variant="ghost" size="sm" disabled><Loader2 className="h-4 w-4 animate-spin" /></Button>
   

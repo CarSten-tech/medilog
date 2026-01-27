@@ -40,13 +40,16 @@ export async function subscribeUser(sub: PushSubscriptionData) {
   return { success: true }
 }
 
-export async function sendTestNotification(userId: string, message: string) {
+export async function sendTestNotification(message: string) {
     const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
     
+    if (!user) return { success: false, error: 'Not authenticated' }
+
     const { data: subs, error } = await supabase
         .from('push_subscriptions')
         .select('*')
-        .eq('user_id', userId)
+        .eq('user_id', user.id)
 
     if (error || !subs || subs.length === 0) {
         console.log("No subs found for", userId)

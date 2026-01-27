@@ -70,20 +70,23 @@ export function usePushNotifications() {
   }
 
   const sendTest = async () => {
-      // Typically user ID would be needed, but for this demo hook attached to a logged in user component
-      // we might want to pass it or rely on server context if we implemented it right.
-      // But sendTestNotification(userId, msg) requires userId.
-      // We will let the server action handle 'current user' logic if possible? 
-      // Nope, my server action takes userId.
-      // Let's assume the caller will trigger a self-notification via an API route or we fetch current user id in client component.
-      // Actually simpler: Server action for test notification can infer user from session!
-      // I'll update the server action later if needed, but for now let's just expose the capability.
+    setLoading(true)
+    try {
+        await sendTestNotification("Test-Nachricht von MediLog! 🚀")
+        alert("Nachricht gesendet! Schau auf deinen Lockscreen.")
+    } catch (error) {
+        console.error("Test failed", error)
+        alert("Senden fehlgeschlagen.")
+    } finally {
+        setLoading(false)
+    }
   }
 
   return {
     isSupported,
     subscription,
     subscribeToPush,
+    sendTest,
     loading
   }
 }
