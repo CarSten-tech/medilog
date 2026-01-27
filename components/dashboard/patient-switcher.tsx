@@ -15,8 +15,7 @@ import { cn } from '@/lib/utils'
 
 interface Patient {
     id: string
-    first_name: string | null
-    last_name: string | null
+    full_name: string | null
     email: string | null
 }
 
@@ -37,7 +36,7 @@ export function PatientSwitcher({ patients, currentUser }: PatientSwitcherProps)
   if (!isSelf) {
       const patient = patients.find(p => p.id === currentPatientId)
       if (patient) {
-          activeName = patient.first_name || patient.email || "Patient"
+          activeName = patient.full_name || patient.email || "Patient"
       }
   }
 
@@ -65,7 +64,7 @@ export function PatientSwitcher({ patients, currentUser }: PatientSwitcherProps)
         {patients.map(patient => (
             <DropdownMenuItem key={patient.id} onClick={() => router.push(`/dashboard?patientId=${patient.id}`)}>
                 <Users className="mr-2 h-4 w-4 text-slate-500" />
-                <span>{patient.first_name || patient.email}</span>
+                <span>{patient.full_name || patient.email}</span>
                 {currentPatientId === patient.id && <span className="ml-auto text-xs text-teal-600">Aktiv</span>}
             </DropdownMenuItem>
         ))}

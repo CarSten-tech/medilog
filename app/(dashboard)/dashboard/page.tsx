@@ -39,11 +39,11 @@ export default async function DashboardPage({ searchParams }: DashboardProps) {
         // 2. Fetch patient name
         const { data: profile } = await supabase
             .from('profiles')
-            .select('first_name, last_name, email')
+            .select('full_name, email')
             .eq('id', patientId)
             .single()
 
-        const pName = profile?.first_name || profile?.email || 'Patient'
+        const pName = profile?.full_name || profile?.email || 'Patient'
         patientName = `${pName}s Medikamente`
     }
   }

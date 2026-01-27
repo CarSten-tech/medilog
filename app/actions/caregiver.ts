@@ -130,7 +130,7 @@ export async function getCareNetwork() {
         const caregiverIds = relsAsPatient.map(r => r.caregiver_id)
         const { data: profiles } = await supabase
             .from('profiles')
-            .select('id, email, first_name, last_name')
+            .select('id, email, full_name')
             .in('id', caregiverIds)
         
         myCaregivers = relsAsPatient.map(r => {
@@ -153,7 +153,7 @@ export async function getCareNetwork() {
         const patientIds = relsAsCaregiver.map(r => r.patient_id)
         const { data: profiles } = await supabase
             .from('profiles')
-            .select('id, email, first_name, last_name')
+            .select('id, email, full_name')
             .in('id', patientIds)
 
         myPatients = relsAsCaregiver.map(r => {

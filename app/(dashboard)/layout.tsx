@@ -36,9 +36,7 @@ export default async function DashboardLayout({
       // @ts-ignore
       id: rel.patient?.id,
       // @ts-ignore
-      first_name: rel.patient?.first_name,
-      // @ts-ignore
-      last_name: rel.patient?.last_name,
+      full_name: rel.patient?.full_name,
       // @ts-ignore
       email: rel.patient?.email
   }))
