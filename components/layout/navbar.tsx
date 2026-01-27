@@ -19,7 +19,7 @@ export function Navbar({ user }: NavbarProps) {
           <div className="flex">
             <Link href="/dashboard" className="flex-shrink-0 flex items-center">
               <Pill className="h-8 w-8 text-teal-600 mr-2" />
-              <span className="font-bold text-xl tracking-tight text-slate-900">MediLog</span>
+              <span className="font-bold text-xl tracking-tight text-slate-900">Carsten</span>
             </Link>
           </div>
           <div className="flex items-center space-x-4">
