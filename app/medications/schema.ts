@@ -24,7 +24,7 @@ export const MedicationFormSchema = z.object({
   refill_threshold: z.number()
     .min(1, { message: "Warnschwelle muss mindestens 1 sein." })
     .refine((n) => !Number.isNaN(n), { message: "Bitte geben Sie eine gültige Zahl ein" }),
-  frequency: z.enum(['daily', 'weekly']).default('daily'),
+  frequency: z.enum(['daily', 'weekly']),
   frequency_note: z.string().optional(),
   expiry_date: z.date().optional().nullable(),
 })
