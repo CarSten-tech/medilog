@@ -2,18 +2,16 @@ import { createClient } from '@/utils/supabase/server'
 import { SortableMedicationGrid } from "@/components/dashboard/sortable-medication-grid"
 import type { MedicationStatus } from "@/components/dashboard/medication-card"
 import { WeeklyRefillButton } from "@/components/dashboard/weekly-refill-button"
-
-// ... imports ...
-
-interface DashboardProps {
-    searchParams: { patientId?: string }
-}
+import { getPendingInvites } from '@/app/actions/care'
+import { InviteAlert } from '@/components/dashboard/invite-alert'
 
 export default async function DashboardPage() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
 
-  if (!user) return null // Should be handled by layout but just in case
+  if (!user) return null 
+  
+  const invites = await getPendingInvites()
 
   const today = new Date().toLocaleDateString('de-DE', {
     weekday: 'long',
@@ -92,6 +90,8 @@ export default async function DashboardPage() {
 
   return (
     <div className="p-8 max-w-7xl mx-auto">
+      <InviteAlert invites={invites} />
+      
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
         <div>
            <h1 className="text-3xl font-bold tracking-tight text-slate-900">Meine Medikamente</h1>

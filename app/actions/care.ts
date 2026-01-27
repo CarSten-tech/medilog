@@ -110,3 +110,70 @@ export async function removeCaregiver(relationshipId: string) {
   revalidatePath('/dashboard/care')
   return { success: true }
 }
+
+/**
+ * NEW: Get invitations where I am the CAREGIVER (Status: Pending)
+ */
+export async function getPendingInvites() {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return []
+
+  const { data: rels } = await supabase
+    .from('care_relationships')
+    .select('*')
+    .eq('caregiver_id', user.id)
+    .eq('status', 'pending')
+
+  if (!rels || rels.length === 0) return []
+
+  // Resolve Patient Names
+  const patientIds = rels.map(r => r.patient_id)
+  const { data: profiles } = await supabase
+    .from('profiles')
+    .select('id, email, full_name')
+    .in('id', patientIds)
+
+  return rels.map(r => {
+      const p = profiles?.find(prof => prof.id === r.patient_id)
+      return {
+          id: r.id,
+          patientName: p?.full_name || p?.email || 'Unbekannt',
+          patientEmail: p?.email,
+          createdAt: r.created_at
+      }
+  })
+}
+
+/**
+ * NEW: Respond to an invite (Accept or Reject)
+ */
+export async function respondToInvite(relationshipId: string, accept: boolean) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Nicht authentifiziert' }
+
+  if (accept) {
+      // Update to accepted
+      const { error } = await supabase
+        .from('care_relationships')
+        .update({ status: 'accepted' })
+        .eq('id', relationshipId)
+        .eq('caregiver_id', user.id) // Security check
+      
+      if (error) return { error: 'Fehler beim Akzeptieren.' }
+  } else {
+      // Reject = Delete
+      const { error } = await supabase
+        .from('care_relationships')
+        .delete()
+        .eq('id', relationshipId)
+        .eq('caregiver_id', user.id)
+      
+      if (error) return { error: 'Fehler beim Ablehnen.' }
+  }
+
+  revalidatePath('/dashboard')
+  revalidatePath('/dashboard/care')
+  return { success: true }
+}
