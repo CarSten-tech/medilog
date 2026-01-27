@@ -7,6 +7,7 @@ import { signOut } from "@/app/login/actions"
 import type { User } from "@supabase/supabase-js"
 import { PushNotificationManager } from "@/components/dashboard/push-notification-manager"
 import { PatientSwitcher } from "@/components/dashboard/patient-switcher"
+import { UserMenu } from "@/components/layout/user-menu"
 
 interface Patient {
     id: string
@@ -30,28 +31,35 @@ export function Navbar({ user, patients = [] }: NavbarProps) {
               <span className="font-bold text-xl tracking-tight text-slate-900">MediLog</span>
             </Link>
           </div>
-          <div className="flex items-center space-x-4">
+          <div className="flex items-center space-x-2 md:space-x-4">
             {patients.length > 0 && (
                 <PatientSwitcher patients={patients} currentUser={{ id: user.id || '', email: user.email }} />
             )}
-            <Link href="/dashboard/care" title="Care Team verwalten">
-                <Button variant="ghost" size="sm" className="flex text-slate-500 hover:text-slate-900 cursor-pointer">
-                    <Users className="h-5 w-5 mr-2" />
-                    <span className="hidden lg:inline">Team</span>
-                </Button>
-            </Link>
-             <span>
-                <PushNotificationManager />
-            </span>
-            <span className="text-sm font-medium text-slate-600 hidden sm:inline-block">
-              {user.email}
-            </span>
-            <form action={signOut}>
-                <Button variant="outline" size="sm" className="bg-white text-slate-700 border-slate-200 hover:bg-slate-50 hover:text-red-600 cursor-pointer">
-                  <LogOut className="h-4 w-4 mr-2" />
-                  <span className="sr-only">Abmelden</span>
-                </Button>
-            </form>
+            
+            {/* Desktop Navigation */}
+            <div className="hidden sm:flex items-center space-x-4">
+                <Link href="/dashboard/care" title="Care Team verwalten">
+                    <Button variant="ghost" size="sm" className="flex text-slate-500 hover:text-slate-900 cursor-pointer">
+                        <Users className="h-5 w-5 mr-2" />
+                        <span className="hidden lg:inline">Team</span>
+                    </Button>
+                </Link>
+                 <span>
+                    <PushNotificationManager />
+                </span>
+                <span className="text-sm font-medium text-slate-600">
+                  {user.email}
+                </span>
+                <form action={signOut}>
+                    <Button variant="outline" size="sm" className="bg-white text-slate-700 border-slate-200 hover:bg-slate-50 hover:text-red-600 cursor-pointer">
+                      <LogOut className="h-4 w-4 mr-2" />
+                      <span className="sr-only">Abmelden</span>
+                    </Button>
+                </form>
+            </div>
+
+            {/* Mobile Navigation */}
+            <UserMenu email={user.email || ''} />
           </div>
         </div>
       </div>
