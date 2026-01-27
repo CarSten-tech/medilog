@@ -52,7 +52,7 @@ export async function sendTestNotification(message: string) {
         .eq('user_id', user.id)
 
     if (error || !subs || subs.length === 0) {
-        console.log("No subs found for", userId)
+        console.log("No subs found for", user.id)
         return { success: false, error: 'No subscriptions found' }
     }
 
