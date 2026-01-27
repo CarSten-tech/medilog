@@ -14,36 +14,9 @@ export default async function DashboardLayout({
     redirect('/login')
   }
 
-  // Fetch care network
-  const { getCareNetwork } = await import('@/app/actions/caregiver')
-  
-  let myPatients = [] as any[]
-  
-  try {
-    const res = await getCareNetwork()
-    if (res?.myPatients) {
-        myPatients = res.myPatients
-    }
-  } catch (err) {
-      console.error("Failed to load care network:", err)
-      // Non-critical: Continue without patients
-  }
-
-  // Map to simpler structure if needed, or pass as is.
-  // PatientSwitcher expects: { id: string, first_name: string | null, last_name: string | null, email: string | null }
-  // The query returns { patient: { ... } }. Need to flatten.
-  const patients = (myPatients || []).map(rel => ({
-      // @ts-ignore
-      id: rel.patient?.id,
-      // @ts-ignore
-      full_name: rel.patient?.full_name,
-      // @ts-ignore
-      email: rel.patient?.email
-  }))
-
   return (
     <div className="min-h-screen bg-slate-50">
-      <Navbar user={user} patients={patients} />
+      <Navbar user={user} />
       <main>
         {children}
       </main>

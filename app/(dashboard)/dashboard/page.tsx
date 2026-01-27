@@ -9,44 +9,11 @@ interface DashboardProps {
     searchParams: { patientId?: string }
 }
 
-export default async function DashboardPage({ searchParams }: DashboardProps) {
+export default async function DashboardPage() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
 
   if (!user) return null // Should be handled by layout but just in case
-
-  const { patientId } = await searchParams || {}
-  
-  let targetUserId = user.id
-  let isCaregiverView = false
-  let patientName = "Meine Medikamente"
-
-  // Check valid caregiver relationship if patientId is requested
-  if (patientId && patientId !== user.id) {
-    // 1. Check if active relationship exists
-    const { data: rel } = await supabase
-        .from('care_relationships')
-        .select('id')
-        .eq('caregiver_id', user.id)
-        .eq('patient_id', patientId)
-        .eq('status', 'active')
-        .single()
-    
-    if (rel) {
-        targetUserId = patientId
-        isCaregiverView = true
-        
-        // 2. Fetch patient name
-        const { data: profile } = await supabase
-            .from('profiles')
-            .select('full_name, email')
-            .eq('id', patientId)
-            .single()
-
-        const pName = profile?.full_name || profile?.email || 'Patient'
-        patientName = `${pName}s Medikamente`
-    }
-  }
 
   const today = new Date().toLocaleDateString('de-DE', {
     weekday: 'long',
@@ -54,11 +21,11 @@ export default async function DashboardPage({ searchParams }: DashboardProps) {
     day: 'numeric'
   })
 
-  // Fetch medications for target user
+  // Fetch medications
   const { data: medications, error } = await supabase
     .from('medications')
     .select('*')
-    .eq('user_id', targetUserId)
+    .eq('user_id', user.id)
     .order('display_order', { ascending: true })
 
   if (error) {
@@ -127,10 +94,10 @@ export default async function DashboardPage({ searchParams }: DashboardProps) {
     <div className="p-8 max-w-7xl mx-auto">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
         <div>
-           <h1 className="text-3xl font-bold tracking-tight text-slate-900">{patientName}</h1>
+           <h1 className="text-3xl font-bold tracking-tight text-slate-900">Meine Medikamente</h1>
            <p className="text-slate-500 font-medium">{today}</p>
         </div>
-        <WeeklyRefillButton targetUserId={isCaregiverView ? targetUserId : undefined} />
+        <WeeklyRefillButton />
       </div>
 
       <SortableMedicationGrid medications={processedMedications} />
