@@ -23,9 +23,10 @@ export default async function DashboardPage({ searchParams }: DashboardProps) {
 
   // Check valid caregiver relationship if patientId is requested
   if (patientId && patientId !== user.id) {
+    // 1. Check if active relationship exists
     const { data: rel } = await supabase
         .from('care_relationships')
-        .select('patient:profiles!care_relationships_patient_id_fkey(first_name, last_name)')
+        .select('id')
         .eq('caregiver_id', user.id)
         .eq('patient_id', patientId)
         .eq('status', 'active')
@@ -34,8 +35,15 @@ export default async function DashboardPage({ searchParams }: DashboardProps) {
     if (rel) {
         targetUserId = patientId
         isCaregiverView = true
-        // @ts-ignore
-        const pName = rel.patient?.first_name || 'Patient'
+        
+        // 2. Fetch patient name
+        const { data: profile } = await supabase
+            .from('profiles')
+            .select('first_name, last_name, email')
+            .eq('id', patientId)
+            .single()
+
+        const pName = profile?.first_name || profile?.email || 'Patient'
         patientName = `${pName}s Medikamente`
     }
   }

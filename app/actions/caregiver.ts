@@ -119,29 +119,54 @@ export async function getCareNetwork() {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return { mine: [], others: [] }
 
-    // My Caregivers (People who help me)
-    const { data: myCaregivers } = await supabase
+    // 1. My Caregivers (People who help me)
+    const { data: relsAsPatient } = await supabase
         .from('care_relationships')
-        .select(`
-            id,
-            status,
-            created_at,
-            caregiver:profiles!care_relationships_caregiver_id_fkey(email, first_name, last_name)
-        `)
+        .select('*')
         .eq('patient_id', user.id)
 
-    // People I help (My patients)
-    const { data: myPatients } = await supabase
+    let myCaregivers: any[] = []
+    if (relsAsPatient && relsAsPatient.length > 0) {
+        const caregiverIds = relsAsPatient.map(r => r.caregiver_id)
+        const { data: profiles } = await supabase
+            .from('profiles')
+            .select('id, email, first_name, last_name')
+            .in('id', caregiverIds)
+        
+        myCaregivers = relsAsPatient.map(r => {
+            const profile = profiles?.find(p => p.id === r.caregiver_id)
+            return {
+                ...r,
+                caregiver: profile || { email: 'Unbekannt' }
+            }
+        })
+    }
+
+    // 2. People I help (My patients)
+    const { data: relsAsCaregiver } = await supabase
         .from('care_relationships')
-        .select(`
-            id,
-            status,
-            patient:profiles!care_relationships_patient_id_fkey(id, email, first_name, last_name)
-        `)
+        .select('*')
         .eq('caregiver_id', user.id)
 
+    let myPatients: any[] = []
+    if (relsAsCaregiver && relsAsCaregiver.length > 0) {
+        const patientIds = relsAsCaregiver.map(r => r.patient_id)
+        const { data: profiles } = await supabase
+            .from('profiles')
+            .select('id, email, first_name, last_name')
+            .in('id', patientIds)
+
+        myPatients = relsAsCaregiver.map(r => {
+            const profile = profiles?.find(p => p.id === r.patient_id)
+            return {
+                ...r,
+                patient: profile || { email: 'Unbekannt' }
+            }
+        })
+    }
+
     return {
-        myCaregivers: myCaregivers || [],
-        myPatients: myPatients || []
+        myCaregivers,
+        myPatients
     }
 }
