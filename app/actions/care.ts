@@ -4,31 +4,34 @@ import { createClient } from '@/utils/supabase/server'
 import { revalidatePath } from 'next/cache'
 
 /**
- * Invite a caregiver via email.
- * Uses a secure RPC function to resolve the email to a User ID.
+ * Search for registered users to invite.
  */
-export async function inviteCaregiver(email: string) {
+export async function searchUsers(query: string) {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return []
+
+    if (query.length < 2) return []
+
+    const { data, error } = await supabase.rpc('search_profiles', { query_text: query })
+    
+    if (error) {
+        console.error("Search failed:", error)
+        return []
+    }
+    
+    return data || []
+}
+
+/**
+ * Invite a caregiver by ID (selected from list).
+ */
+export async function inviteCaregiverById(caregiverId: string) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
 
-  if (!user) {
-      return { error: 'Nicht authentifiziert' }
-  }
-
-  // 1. Resolve Info
-  const { data: caregiverId, error: rpcError } = await supabase
-    .rpc('get_user_id_by_email', { email_input: email })
-
-  if (rpcError || !caregiverId) {
-    console.error("RPC Lookup failed:", rpcError)
-    // Security: Don't reveal if user exists or not specifically, but for this UX we need to say "User not found".
-    return { error: 'Kein Nutzer mit dieser E-Mail gefunden.' }
-  }
-
-  // 2. Validation
-  if (caregiverId === user.id) {
-    return { error: 'Du kannst dich nicht selbst einladen.' }
-  }
+  if (!user) return { error: 'Nicht authentifiziert' }
+  if (caregiverId === user.id) return { error: 'Selbst-Einladung nicht möglich.' }
 
   // Check existing
   const { data: existing } = await supabase
@@ -39,41 +42,30 @@ export async function inviteCaregiver(email: string) {
     .single()
 
   if (existing) {
-    return { error: 'Dieser Nutzer ist bereits eingeladen oder hinzugefügt.' }
+    return { error: 'Nutzer bereits eingeladen.' }
   }
 
-  // 3. Insert
+  // Insert
   const { error: insertError } = await supabase
     .from('care_relationships')
     .insert({
       patient_id: user.id,
       caregiver_id: caregiverId,
-      status: 'pending' // Default
+      status: 'pending'
     })
 
   if (insertError) {
-    console.error("Insert failed:", insertError)
-    return { error: 'Fehler beim Speichern der Einladung.' }
+    return { error: 'Fehler beim Speichern.' }
   }
 
-  revalidatePath('/settings')
+  revalidatePath('/dashboard/care')
   return { success: true }
 }
 
-/**
- * Get list of people who care for me (My Caregivers).
- */
 export async function getMyCaregivers() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
-  
   if (!user) return []
-
-  // We need the EMAIL of the caregiver to display it.
-  // Since we don't have a direct join setup in TypeGen immediately visible,
-  // we will fetch relationships first, then resolve emails via 'profiles' or another query.
-  // Ideally, use a join: .select('*, caregiver:profiles!caregiver_id(email)') if FK exists.
-  // Fallback: Fetch IDs and then profiles.
 
   const { data: rels } = await supabase
     .from('care_relationships')
@@ -89,7 +81,6 @@ export async function getMyCaregivers() {
     .select('id, email, full_name')
     .in('id', caregiverIds)
     
-  // Combine data
   return rels.map(r => {
       const profile = profiles?.find(p => p.id === r.caregiver_id)
       return {
@@ -102,9 +93,6 @@ export async function getMyCaregivers() {
   })
 }
 
-/**
- * Remove a caregiver (Revoke access).
- */
 export async function removeCaregiver(relationshipId: string) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -115,12 +103,10 @@ export async function removeCaregiver(relationshipId: string) {
     .from('care_relationships')
     .delete()
     .eq('id', relationshipId)
-    .eq('patient_id', user.id) // Ensure I am the patient deleting my caregiver
+    .eq('patient_id', user.id)
 
-  if (error) {
-     return { error: 'Löschen fehlgeschlagen.' }
-  }
+  if (error) return { error: 'Löschen fehlgeschlagen.' }
 
-  revalidatePath('/settings')
+  revalidatePath('/dashboard/care')
   return { success: true }
 }
