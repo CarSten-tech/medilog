@@ -1,5 +1,5 @@
 // Enterprise Service Worker
-// Version: v3.0
+// Version: v3.1 (Fixed & Robust)
 
 self.addEventListener('install', (event) => {
     // INSTANT ACTIVATION: Skip waiting allows new SW to take over immediately
@@ -10,47 +10,62 @@ self.addEventListener('activate', (event) => {
     event.waitUntil(self.clients.claim());
 });
 
-self.addEventListener('push', (event) => {
-    if (!event.data) return;
-
-    try {
-        const data = event.data.json();
-        
-        // iOS Requirement: Explicitly show notification
-        const options = {
-            body: data.body,
-            icon: data.icon || '/icon.png',
-            badge: '/icon.png', // Android specific, ignored on iOS
-            data: {
-                url: data.url || '/dashboard' // Deep link payload
-            }
-        };
-
-        event.waitUntil(
-            self.registration.showNotification(data.title, options)
-        );
-    } catch (err) {
-        console.error('Error parsing push data:', err);
+self.addEventListener('push', function (event) {
+  // 1. Daten sicher extrahieren
+  let data = {};
+  try {
+    if (event.data) {
+      data = event.data.json();
     }
+  } catch (e) {
+    console.error('Push data parsing failed', e);
+    // Fallback, falls JSON fehlschlägt
+    data = { title: 'MediLog', body: event.data ? event.data.text() : 'Neue Nachricht' };
+  }
+
+  // 2. Fallback-Werte setzen (WICHTIG für iOS!)
+  const title = data.title || 'MediLog Nachricht';
+  const options = {
+    body: data.body || 'Bestand prüfen!',
+    icon: '/icon.png', // Muss im public ordner existieren!
+    badge: '/icon.png',
+    data: { url: data.url || '/' }, // URL zum Öffnen (wrapped in inner data obj)
+    // iOS spezifische Optionen, damit es zuverlässiger ist
+    tag: 'medilog-notification', 
+    renotify: true
+  };
+
+  // 3. Die Benachrichtigung erzwingen
+  event.waitUntil(
+    self.registration.showNotification(title, options)
+  );
 });
 
-self.addEventListener('notificationclick', (event) => {
-    // Close the notification
-    event.notification.close();
+// Klick-Verhalten (Öffnet die App)
+self.addEventListener('notificationclick', function (event) {
+  event.notification.close();
+  
+  // Extract URL from nested data object or directly
+  const urlToOpen = (event.notification.data && event.notification.data.url) || '/';
 
-    // UX: Open the App/URL
-    event.waitUntil(
-        self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
-            // If we have an open window, focus it
-            for (const client of clientList) {
-                if (client.url && 'focus' in client) {
-                    return client.focus();
-                }
-            }
-            // Otherwise open new window
-            if (self.clients.openWindow) {
-                return self.clients.openWindow(event.notification.data.url);
-            }
-        })
-    );
+  event.waitUntil(
+    clients.matchAll({ type: 'window', includeUncontrolled: true }).then(function (clientList) {
+      // Wenn Tab schon offen ist -> Fokus
+      for (var i = 0; i < clientList.length; i++) {
+        var client = clientList[i];
+        // Check if client is focusing on our app base URL
+        if (client.url && client.url.includes(self.registration.scope) && 'focus' in client) {
+             return client.focus().then(focusedClient => {
+                 // Optional: Navigate to specific URL after focusing
+                 if (focusedClient && focusedClient.navigate) {
+                     return focusedClient.navigate(urlToOpen);
+                 }
+             });
+        }
+      }
+      // Sonst -> Neu öffnen
+      if (clients.openWindow)
+        return clients.openWindow(urlToOpen);
+    })
+  );
 });

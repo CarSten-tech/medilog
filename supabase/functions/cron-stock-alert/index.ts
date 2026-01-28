@@ -3,11 +3,11 @@ import webpush from 'npm:web-push'
 
 console.log("🚀 Cron Job started: Stock & Expiry Check")
 
-// Configuration
-const LOW_STOCK_DAYS = 8
-const CRITICAL_STOCK_DAYS = 3
-const EXPIRY_WARNING_DAYS = 30
-const SILENCE_PERIOD_DAYS = 3
+// --- CONFIGURATION ---
+const LOW_STOCK_DAYS = 10       // Warning start (e.g. 10 days)
+const CRITICAL_STOCK_DAYS = 5   // Critical: From here on, alert ALWAYS (for 2x daily checks)
+const EXPIRY_WARNING_DAYS = 30  // Expiry warning
+const SILENCE_PERIOD_DAYS = 1   // How often to annoy if stock is just "low" but not critical
 
 // Initialize Supabase Client
 const supabase = createClient(
@@ -15,41 +15,34 @@ const supabase = createClient(
   Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
 )
 
-// Configure WebPush
+// Configure WebPush Keys
 const vapidPublicKey = Deno.env.get('NEXT_PUBLIC_VAPID_PUBLIC_KEY')
 const vapidPrivateKey = Deno.env.get('VAPID_PRIVATE_KEY')
 const vapidSubject = Deno.env.get('VAPID_SUBJECT') || 'mailto:admin@medilog.app'
 
-if (!vapidPublicKey || !vapidPrivateKey) {
-  console.error("❌ Critical: VAPID keys missing in Edge Function Secrets")
-} else {
+if (vapidPublicKey && vapidPrivateKey) {
     webpush.setVapidDetails(vapidSubject, vapidPublicKey, vapidPrivateKey)
 }
 
-Deno.serve(async (req) => {
+// Type Definition
+interface PatientGroup {
+    patientName: string;
+    items: string[];
+}
+
+Deno.serve(async (req: Request) => {
   try {
     // 1. Fetch Medications
-    // We need to fetch ALL medications that might be relevant
-    // Optimization: Filter in SQL would be better but for complex logic (daily_dosage calc), JS is easier for now unless dataset is huge.
-    // Let's filter slightly in SQL: active medications (stock > 0 OR expiry close)
     const { data: medications, error: medError } = await supabase
       .from('medications')
       .select(`
-        id, 
-        name, 
-        current_stock, 
-        daily_dosage, 
-        expiry_date, 
-        updated_at,
-        user_id,
-        profiles (full_name, email)
+        id, name, current_stock, daily_dosage, expiry_date, updated_at, user_id,
+        profiles (full_name)
       `)
     
     if (medError) throw medError
     
-    console.log(`🔍 Analying ${medications.length} medications...`)
-
-    const alertsToSend = [] // { userId, title, body, reason }
+    const alertsToSend = [] 
 
     for (const med of medications) {
         // --- LOGIC 1: Expiry ---
@@ -60,141 +53,123 @@ Deno.serve(async (req) => {
             const daysToExpiry = Math.ceil((expiry.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
             
             if (daysToExpiry <= EXPIRY_WARNING_DAYS) {
-                if (daysToExpiry < 0) {
-                    expiryAlert = `ABGELAUFEN am ${expiry.toLocaleDateString('de-DE')}`
-                } else {
-                    expiryAlert = `läuft bald ab (${expiry.toLocaleDateString('de-DE')})`
-                }
+                expiryAlert = daysToExpiry < 0 
+                    ? `ABGELAUFEN am ${expiry.toLocaleDateString('de-DE')}` 
+                    : `läuft bald ab (${expiry.toLocaleDateString('de-DE')})`
             }
         }
 
         // --- LOGIC 2: Stock ---
         let stockAlert = null
-        let isCritical = false
         if (med.daily_dosage > 0) {
             const daysLeft = Math.floor(med.current_stock / med.daily_dosage)
             
-            if (daysLeft < LOW_STOCK_DAYS) {
-                if (daysLeft <= CRITICAL_STOCK_DAYS) {
-                    isCritical = true
-                    stockAlert = `Kritisch: Nur noch für ${daysLeft} Tage!`
-                } else {
-                    // "Silence Phase" Check
-                    // If updated recently (e.g. today), we might assume the user *knows* (they just edited it).
-                    // Logic: If updated > SILENCE_PERIOD_DAYS ago, warn.
-                    // OR if update was recent but stock is still low? 
-                    // User Request: "If CRITICAL (<3 days), ignore silence phase. If Warning (4-8), respect silence."
-                    
-                    const lastUpdate = new Date(med.updated_at)
-                    const now = new Date()
-                    const daysSinceUpdate = (now.getTime() - lastUpdate.getTime()) / (1000 * 60 * 60 * 24)
+            // CRITICAL: If under 5 days, ALWAYS alert (ignores silence period)
+            // This ensures the morning/evening cron always delivers the message.
+            if (daysLeft <= CRITICAL_STOCK_DAYS) {
+                stockAlert = `DRINGEND: Reicht nur noch ${daysLeft} Tage!`
+            } 
+            // LOW: If just low, check silence period to avoid spamming
+            else if (daysLeft < LOW_STOCK_DAYS) {
+                const lastUpdate = new Date(med.updated_at)
+                const now = new Date()
+                const daysSinceUpdate = (now.getTime() - lastUpdate.getTime()) / (1000 * 60 * 60 * 24)
 
-                    if (daysSinceUpdate > SILENCE_PERIOD_DAYS) {
-                         stockAlert = `Neige: Reicht für ${daysLeft} Tage.`
-                    } else {
-                        console.log(`Skipping Stock Alert for ${med.name}: Updated recently (${daysSinceUpdate.toFixed(1)} days ago) and not critical.`)
-                    }
+                if (daysSinceUpdate > SILENCE_PERIOD_DAYS) {
+                     stockAlert = `Bestand niedrig: Reicht noch ${daysLeft} Tage.`
                 }
             }
         }
 
         // Combine Alerts
         if (expiryAlert || stockAlert) {
-            const reasons = []
+            const reasons: string[] = []
             if (stockAlert) reasons.push(stockAlert)
             if (expiryAlert) reasons.push(expiryAlert)
             
             alertsToSend.push({
-                medId: med.id,
                 userId: med.user_id,
-                medName: med.name,
+                // @ts-ignore
                 patientName: med.profiles?.full_name || 'Patient',
                 body: `${med.name}: ${reasons.join(' ')}`
             })
         }
     }
 
-    console.log(`📢 Found ${alertsToSend.length} alerts to dispatch.`)
-    
-    // 2. Dispatch
-    // Group by User to batch notifications? 
-    // For V1, simplest is per-medication trigger, but that might spam. 
-    // Let's grouping by USER would be better UX.
-    
-    // Grouping by PatientId (The owner of the meds)
-    const groupedByPatient = {}
+    // 2. Dispatch Grouping
+    const groupedByPatient: Record<string, PatientGroup> = {}
     for (const alert of alertsToSend) {
-        if (!groupedByPatient[alert.userId]) groupedByPatient[alert.userId] = { patientName: alert.patientName, items: [] }
+        if (!groupedByPatient[alert.userId]) {
+            groupedByPatient[alert.userId] = { patientName: alert.patientName, items: [] }
+        }
         groupedByPatient[alert.userId].items.push(alert.body)
     }
 
-    // Process each Patient Group
+    const debugResults = []
+
+    // Send Notifications
     for (const [patientId, data] of Object.entries(groupedByPatient)) {
         const messageBody = data.items.join('\n')
-        const title = `MediLog Alarm: ${data.patientName}`
+        const title = `MediLog Status: ${data.patientName}`
 
-        // A) Notify Patient
-        await sendPushToUser(patientId, title, messageBody)
+        // Patient
+        const resPatient = await sendPushToUser(patientId, title, messageBody)
+        debugResults.push({ type: 'Patient', id: patientId, results: resPatient })
 
-        // B) Notify Caregivers
+        // Caregivers
         const { data: caregivers } = await supabase
             .from('care_relationships')
             .select('caregiver_id')
             .eq('patient_id', patientId)
             .eq('status', 'accepted')
         
-        if (caregivers && caregivers.length > 0) {
-            console.log(`   fan-out to ${caregivers.length} caregivers for ${data.patientName}`)
+        if (caregivers) {
             for (const cg of caregivers) {
-                await sendPushToUser(cg.caregiver_id, title, `Bei ${data.patientName}:\n${messageBody}`)
+                const resCG = await sendPushToUser(cg.caregiver_id, title, `Bei ${data.patientName}:\n${messageBody}`)
+                debugResults.push({ type: 'Caregiver', id: cg.caregiver_id, results: resCG })
             }
         }
     }
 
-    return new Response(JSON.stringify({ success: true, alerts: alertsToSend.length }), {
+    return new Response(JSON.stringify({ success: true, count: alertsToSend.length, debug: debugResults }), {
       headers: { 'Content-Type': 'application/json' },
     })
 
   } catch (err) {
-    console.error("🔥 Job Failed:", err)
     return new Response(String(err), { status: 500 })
   }
 })
 
-// Helper: Send Push
+// Helper
 async function sendPushToUser(userId: string, title: string, body: string) {
-    // Fetch stored subscriptions
-    const { data: subs } = await supabase
-        .from('push_subscriptions')
-        .select('*')
-        .eq('user_id', userId)
-    
-    if (!subs || subs.length === 0) {
-        console.log(`   No devices for user ${userId.substring(0,5)}...`)
-        return
-    }
+    const vapidPublicKey = Deno.env.get('NEXT_PUBLIC_VAPID_PUBLIC_KEY')
+    const vapidPrivateKey = Deno.env.get('VAPID_PRIVATE_KEY')
+    const vapidSubject = Deno.env.get('VAPID_SUBJECT') || 'mailto:admin@medilog.app'
 
-    const payload = JSON.stringify({
-        title,
-        body,
-        icon: '/icon.png',
-        url: '/dashboard'
-    })
+    const { data: subs } = await supabase.from('push_subscriptions').select('*').eq('user_id', userId)
+    if (!subs || subs.length === 0) return [{ status: 'No Devices' }]
+
+    const payload = JSON.stringify({ title, body, icon: '/icon.png', url: '/dashboard' })
+    const statuses = []
 
     for (const sub of subs) {
         try {
             await webpush.sendNotification({
                 endpoint: sub.endpoint,
                 keys: { p256dh: sub.p256dh, auth: sub.auth }
-            }, payload)
-            console.log(`   ✅ Sent to device ${sub.id.substring(0,5)}`)
-        } catch (e) {
+            }, payload, {
+                TTL: 86400, urgency: 'normal',
+                vapidDetails: { subject: vapidSubject!, publicKey: vapidPublicKey!, privateKey: vapidPrivateKey! }
+            })
+            statuses.push({ id: sub.id, status: 'Success' })
+        } catch (e: any) {
              if (e.statusCode === 410 || e.statusCode === 404) {
-                 console.log(`   🗑 Auto-cleaning dead subscription ${sub.id}`)
-                 await supabase.from('push_subscriptions').delete().eq('id', sub.id)
+                 await supabase.from('push_subscriptions').delete().eq('id', sub.id) // Cleanup
+                 statuses.push({ id: sub.id, status: 'Deleted' })
              } else {
-                 console.error(`   ❌ Send failed:`, e.statusCode)
+                 statuses.push({ id: sub.id, status: 'Error' })
              }
         }
     }
+    return statuses
 }
