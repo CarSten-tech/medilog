@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Bell, BellOff, Loader2 } from 'lucide-react'
-import { savePushSubscription } from '@/app/actions/push'
+import { deletePushSubscription, savePushSubscription } from '@/app/actions/push'
 import { toast } from 'sonner' // Assuming sonner is installed or use standard toast
 
 // Base64 to Uint8Array helper
@@ -52,33 +52,47 @@ export default function PushManager() {
     }
   }
 
-  async function subscribeToPush() {
+  async function togglePush() {
+    setLoading(true)
     try {
-        setLoading(true)
-        const registration = await navigator.serviceWorker.ready
-        const vapidPublicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY
-
-        if (!vapidPublicKey) {
-            toast.error("VAPID Key missing on client")
-            return
-        }
-
-        const sub = await registration.pushManager.subscribe({
-            userVisibleOnly: true,
-            applicationServerKey: urlBase64ToUint8Array(vapidPublicKey)
-        })
-
-        // Save to Server
-        const res = await savePushSubscription(JSON.parse(JSON.stringify(sub)))
-        if (res.error) {
-            toast.error("Fehler beim Speichern des Abos")
+        if (subscription) {
+            // Unsubscribe
+            await subscription.unsubscribe()
+            await deletePushSubscription(subscription.endpoint)
+            setSubscription(null)
+            toast.success("Benachrichtigungen deaktiviert")
         } else {
-            setSubscription(sub)
-            toast.success("Benachrichtigungen aktiviert!")
+            // Subscribe
+            const registration = await navigator.serviceWorker.ready
+            const vapidPublicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY
+
+            if (!vapidPublicKey) {
+                toast.error("VAPID Key missing on client")
+                return
+            }
+
+            const sub = await registration.pushManager.subscribe({
+                userVisibleOnly: true,
+                applicationServerKey: urlBase64ToUint8Array(vapidPublicKey)
+            })
+
+            // Serialize robustly
+            const subJson = sub.toJSON()
+            
+            // Save to Server
+            const res = await savePushSubscription(subJson)
+            if (res.error) {
+                toast.error(res.error)
+                // Rollback if server fails
+                await sub.unsubscribe()
+            } else {
+                setSubscription(sub)
+                toast.success("Benachrichtigungen aktiviert!")
+            }
         }
     } catch (error) {
-        console.error("Subscription failed", error)
-        toast.error("Konnte Benachrichtigungen nicht aktivieren")
+        console.error("Subscription toggle failed", error)
+        toast.error("Vorgang fehlgeschlagen")
     } finally {
         setLoading(false)
     }
@@ -92,19 +106,23 @@ export default function PushManager() {
       return <Button variant="ghost" disabled><Loader2 className="w-4 h-4 animate-spin" /></Button>
   }
 
-  if (subscription) {
-      return (
-          <Button variant="outline" className="gap-2 text-green-600 border-green-200 bg-green-50 pointer-events-none">
-              <Bell className="w-4 h-4" />
-              Aktiv
-          </Button>
-      )
-  }
-
   return (
-    <Button onClick={subscribeToPush} variant="outline" className="gap-2">
-      <BellOff className="w-4 h-4" />
-      Benachrichtigungen aktivieren
+    <Button 
+        onClick={togglePush} 
+        variant={subscription ? "outline" : "default"} 
+        className={subscription ? "gap-2 text-green-600 border-green-200 bg-green-50 hover:bg-red-50 hover:text-red-600 hover:border-red-200" : "gap-2"}
+    >
+      {subscription ? (
+          <>
+            <Bell className="w-4 h-4" />
+            <span>Aktiv (Klicken zum Deaktivieren)</span>
+          </>
+      ) : (
+          <>
+            <BellOff className="w-4 h-4" />
+            <span>Aktivieren</span>
+          </>
+      )}
     </Button>
   )
 }
