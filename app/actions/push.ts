@@ -69,6 +69,18 @@ export async function sendNotificationToUser(userId: string, title: string, body
         }, payload)
     }))
 
-    // Cleanup invalid subs logic could go here
-    return { success: true, results }
+    // Check for failures
+    const failures = results.filter(r => r.status === 'rejected')
+    const successes = results.filter(r => r.status === 'fulfilled')
+
+    if (successes.length === 0 && failures.length > 0) {
+        // @ts-ignore
+        const reason = failures[0].reason
+        console.error("Push Failed:", reason)
+        return { 
+            error: `Sendeprozess fehlgeschlagen. Server sagt: ${reason?.statusCode || reason?.message || 'Unbekannter Fehler'}` 
+        }
+    }
+
+    return { success: true, sentCount: successes.length }
 }
