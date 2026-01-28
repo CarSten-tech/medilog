@@ -9,7 +9,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Button } from "@/components/ui/button"
-import { Menu, LogOut, Users } from "lucide-react"
+import { Menu, LogOut, Users, Bug } from "lucide-react"
 import { signOut } from "@/app/login/actions"
 import Link from "next/link"
 
@@ -47,7 +47,12 @@ export function UserMenu({ email }: UserMenuProps) {
         <DropdownMenuSeparator />
         
 
-
+        <DropdownMenuItem asChild>
+            <Link href="/dashboard/debug" className="cursor-pointer w-full flex items-center">
+                <Bug className="mr-2 h-4 w-4" />
+                <span>System Status</span>
+            </Link>
+        </DropdownMenuItem>
         <DropdownMenuSeparator />
 
         <DropdownMenuItem asChild>
