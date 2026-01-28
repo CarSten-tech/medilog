@@ -174,25 +174,6 @@ create policy "Users can delete their own care relationships"
   using (auth.uid() = patient_id or auth.uid() = caregiver_id);
 
 
--- 2. Push Subscriptions Table
-create table if not exists push_subscriptions (
-  id uuid default gen_random_uuid() primary key,
-  user_id uuid references auth.users(id) not null,
-  endpoint text not null,
-  keys jsonb not null,
-  device_name text,
-  created_at timestamptz default now(),
-  updated_at timestamptz default now(),
-  unique(user_id, endpoint)
-);
-
-alter table push_subscriptions enable row level security;
-
-create policy "Users can manage their own subscriptions"
-  on push_subscriptions for all
-  using (auth.uid() = user_id);
-
-
 -- 3. Medications Updates
 -- Add low_stock_threshold (if not exists, prompt said ensure it exists)
 do $$
