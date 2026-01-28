@@ -121,7 +121,7 @@
     -webkit-tap-highlight-color: transparent;
   }
   html {
-     background-color: #ffffff;
+     background-color: #ffffff !important;
   }
   body {
     @apply bg-background text-foreground;
