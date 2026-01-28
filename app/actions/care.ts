@@ -1,6 +1,7 @@
 'use server'
 
 import { createClient } from '@/utils/supabase/server'
+import { createClient as createAdminClient } from '@supabase/supabase-js'
 import { revalidatePath } from 'next/cache'
 
 /**
@@ -74,7 +75,7 @@ export async function inviteCaregiverByEmail(email: string) {
 
     // 1. Resolve Info via RPC (Using Admin Client to prevent exposing RPC to users)
     // Note: We need a service role client here because we revoked user access to this RPC
-    const supabaseAdmin = await createClient(
+    const supabaseAdmin = createAdminClient(
         process.env.NEXT_PUBLIC_SUPABASE_URL!,
         process.env.SUPABASE_SERVICE_ROLE_KEY!
     )
