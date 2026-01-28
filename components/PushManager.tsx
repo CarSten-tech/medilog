@@ -120,7 +120,7 @@ export default function PushManager() {
       ) : (
           <>
             <BellOff className="w-4 h-4" />
-            <span>Aktivieren</span>
+            <span>Aktivieren v2</span>
           </>
       )}
     </Button>
