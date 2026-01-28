@@ -14,18 +14,21 @@ export async function createMedication(data: MedicationFormData, targetUserId?: 
     throw new Error('Unauthorized')
   }
 
+  // SECURITY: Server-Side Validation
+  const validated = MedicationFormSchema.parse(data)
+
   // 1. Insert into medications table
   const { error: medError } = await supabase
     .from('medications')
     .insert({
       user_id: targetUserId || user.id,
-      name: data.name,
-      current_stock: data.current_stock,
-      daily_dosage: data.daily_dosage,
-      frequency_note: data.frequency_note,
-      expiry_date: data.expiry_date ? data.expiry_date.toISOString() : null,
-      refill_threshold: data.refill_threshold,
-      package_size: data.package_size,
+      name: validated.name,
+      current_stock: validated.current_stock,
+      daily_dosage: validated.daily_dosage,
+      frequency_note: validated.frequency_note,
+      expiry_date: validated.expiry_date ? validated.expiry_date.toISOString() : null,
+      refill_threshold: validated.refill_threshold,
+      package_size: validated.package_size,
       // Defaults/Placeholders for constraints if any
       form_factor: 'tablet', // defaulting for now as we removed the field from UI
       strength: 'N/A' 
@@ -75,16 +78,19 @@ export async function updateMedication(id: string, data: MedicationFormData) {
     throw new Error('Unauthorized')
   }
 
+  // SECURITY: Server-Side Validation
+  const validated = MedicationFormSchema.parse(data)
+
   const { error } = await supabase
     .from('medications')
     .update({
-      name: data.name,
-      current_stock: data.current_stock,
-      daily_dosage: data.daily_dosage,
-      frequency_note: data.frequency_note,
-      expiry_date: data.expiry_date ? data.expiry_date.toISOString() : null,
-      package_size: data.package_size,
-      refill_threshold: data.refill_threshold,
+      name: validated.name,
+      current_stock: validated.current_stock,
+      daily_dosage: validated.daily_dosage,
+      frequency_note: validated.frequency_note,
+      expiry_date: validated.expiry_date ? validated.expiry_date.toISOString() : null,
+      package_size: validated.package_size,
+      refill_threshold: validated.refill_threshold,
     })
     .eq('id', id)
 

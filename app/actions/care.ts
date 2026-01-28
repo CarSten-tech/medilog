@@ -62,6 +62,55 @@ export async function inviteCaregiverById(caregiverId: string) {
   return { success: true }
 }
 
+/**
+ * Invite User by Email (Secure RPC)
+ */
+export async function inviteCaregiverByEmail(email: string) {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return { error: 'Not authorized' }
+    
+    if (email === user.email) return { error: 'You cannot invite yourself.' }
+
+    // 1. Resolve Info via RPC (Using Admin Client to prevent exposing RPC to users)
+    // Note: We need a service role client here because we revoked user access to this RPC
+    const supabaseAdmin = await createClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.SUPABASE_SERVICE_ROLE_KEY!
+    )
+
+    const { data: targetUserId, error: rpcError } = await supabaseAdmin
+        .rpc('get_user_id_by_email', { email_input: email })
+
+    if (rpcError || !targetUserId) {
+        return { error: 'Nutzer nicht gefunden. Bitte prüfen Sie die E-Mail.' }
+    }
+
+    // 2. Check Existing
+    const { data: existing } = await supabase
+        .from('care_relationships')
+        .select('id')
+        .eq('patient_id', user.id)
+        .eq('caregiver_id', targetUserId)
+        .single()
+    
+    if (existing) return { error: 'Diesen Nutzer haben Sie bereits eingeladen.' }
+
+    // 3. Insert
+    const { error } = await supabase
+        .from('care_relationships')
+        .insert({
+            patient_id: user.id,
+            caregiver_id: targetUserId,
+            status: 'pending' 
+        })
+    
+    if (error) return { error: 'Fehler beim Einladen.' }
+
+    revalidatePath('/dashboard/care')
+    return { success: true }
+}
+
 export async function getMyCaregivers() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()

@@ -1,5 +1,5 @@
 import { getMyCaregivers } from '@/app/actions/care'
-import { CaregiverManager } from '@/components/CaregiverManager'
+import CaregiverManager from '@/components/CaregiverManager'
 
 import { createClient } from '@/utils/supabase/server'
 import { redirect } from 'next/navigation'

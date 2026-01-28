@@ -1,90 +1,74 @@
 'use server'
 
-import webpush from 'web-push'
 import { createClient } from '@/utils/supabase/server'
+import webpush from 'web-push'
 
-webpush.setVapidDetails(
-  process.env.VAPID_SUBJECT || 'mailto:admin@medilog.app',
-  process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY!,
-  process.env.VAPID_PRIVATE_KEY!
-)
-
-interface SubscriptionKeys {
-  p256dh: string
-  auth: string
-}
-
-interface PushSubscriptionData {
-  endpoint: string
-  keys: SubscriptionKeys
-}
-
-export async function subscribeUser(sub: PushSubscriptionData) {
+/**
+ * Save a Web Push Subscription (VAPID)
+ */
+export async function savePushSubscription(subscription: any) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Unauthorized' }
 
-  if (!user) throw new Error('User not authenticated')
+  const { endpoint, keys } = subscription
 
-  const { error } = await supabase.from('push_subscriptions').upsert({
-    user_id: user.id,
-    endpoint: sub.endpoint,
-    p256dh: sub.keys.p256dh,
-    auth: sub.keys.auth,
-  }, { onConflict: 'endpoint' })
+  const { error } = await supabase
+    .from('push_subscriptions')
+    .upsert({
+        user_id: user.id,
+        endpoint: endpoint,
+        keys: keys,
+        updated_at: new Date().toISOString()
+    }, { onConflict: 'user_id, endpoint' })
 
   if (error) {
-    console.error('Error saving subscription:', error)
-    throw error
+    console.error("Save Sub Error", error)
+    return { error: 'Failed to save subscription' }
   }
-  
+
   return { success: true }
 }
 
-// Core logic: Send to a specific user ID
-export async function sendNotificationToUser(userId: string, title: string, message: string) {
-    const supabase = await createClient()
 
-    const { data: subs, error } = await supabase
+/**
+ * Helper: Send a single notification (Server-Side)
+ * Useful for "Test Notification" button or immediate alerts.
+ */
+export async function sendNotificationToUser(userId: string, title: string, body: string) {
+    const supabase = await createClient()
+    
+    // Fetch user subs
+    const { data: subs } = await supabase
         .from('push_subscriptions')
         .select('*')
         .eq('user_id', userId)
+    
+    if (!subs || subs.length === 0) return { error: 'User has no subscriptions' }
 
-    if (error || !subs || subs.length === 0) {
-        console.log("No subs found for", userId)
-        return { success: false, error: 'No subscriptions found' }
-    }
+    // VAPID Setup
+    const vapidEmail = 'mailto:admin@medilog.app'
+    const vapidPrivateKey = process.env.VAPID_PRIVATE_KEY
+    const vapidPublicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY
 
-    const results = await Promise.all(subs.map(async (sub) => {
-        try {
-            await webpush.sendNotification(
-                {
-                    endpoint: sub.endpoint,
-                    keys: {
-                        p256dh: sub.p256dh,
-                        auth: sub.auth
-                    }
-                },
-                JSON.stringify({
-                    title: title,
-                    body: message,
-                })
-            )
-            return { success: true }
-        } catch (error) {
-            console.error('Push error', error)
-            return { success: false, error }
-        }
+    if (!vapidPrivateKey || !vapidPublicKey) return { error: 'Server VAPID config missing' }
+
+    webpush.setVapidDetails(vapidEmail, vapidPublicKey, vapidPrivateKey)
+
+    const payload = JSON.stringify({
+        title,
+        body,
+        icon: '/icon.png'
+    })
+
+    const results = await Promise.allSettled(subs.map(sub => {
+        // @ts-ignore
+        return webpush.sendNotification({
+            endpoint: sub.endpoint,
+            keys: sub.keys
+        }, payload)
     }))
-    
-    return { results }
-}
 
-// Wrapper for frontend "Test" button (infers user from session)
-export async function sendTestNotification(message: string) {
-    const supabase = await createClient()
-    const { data: { user } } = await supabase.auth.getUser()
-    
-    if (!user) return { success: false, error: 'Not authenticated' }
-    
-    return sendNotificationToUser(user.id, 'MediLog Test', message)
+    // Cleanup invalid subs logic could go here
+    return { success: true, results }
 }
