@@ -5,7 +5,7 @@ import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { signOut } from "@/app/login/actions"
 import type { User } from "@supabase/supabase-js"
-import { PushNotificationManager } from "@/components/dashboard/push-notification-manager"
+
 import { PatientSwitcher } from "@/components/dashboard/patient-switcher"
 import { UserMenu } from "@/components/layout/user-menu"
 
@@ -44,9 +44,7 @@ export function Navbar({ user, patients = [] }: NavbarProps) {
                         <span className="hidden lg:inline">Team</span>
                     </Button>
                 </Link>
-                 <span>
-                    <PushNotificationManager />
-                </span>
+
                 <span className="text-sm font-medium text-slate-600">
                   {user.email}
                 </span>
