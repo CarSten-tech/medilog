@@ -9,10 +9,9 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Button } from "@/components/ui/button"
-import { Menu, LogOut, Users, Bell } from "lucide-react"
+import { Menu, LogOut, Users } from "lucide-react"
 import { signOut } from "@/app/login/actions"
 import Link from "next/link"
-import { PushNotificationManager } from "@/components/dashboard/push-notification-manager"
 
 interface UserMenuProps {
     email: string
@@ -47,16 +46,7 @@ export function UserMenu({ email }: UserMenuProps) {
 
         <DropdownMenuSeparator />
         
-        {/* Custom Item for Push Manager since it's a component */}
-        <div className="px-2 py-1.5 text-sm">
-             <div className="flex items-center justify-between">
-                <span className="flex items-center text-slate-700">
-                    <Bell className="mr-2 h-4 w-4" />
-                    Benachrichtigungen
-                </span>
-                <PushNotificationManager />
-             </div>
-        </div>
+
 
         <DropdownMenuSeparator />
 
