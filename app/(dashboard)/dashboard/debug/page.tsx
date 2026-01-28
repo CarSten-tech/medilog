@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
+import PushManager from '@/components/PushManager'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { sendNotificationToUser } from '@/app/actions/push'
 import { toast } from 'sonner'
@@ -61,6 +62,12 @@ export default function DebugPage() {
             <p className="text-xs text-gray-500 mt-2">
                 HINWEIS: Wenn dies funktioniert, aber der Automatik-Alarm nicht, liegt es daran, dass der "Silent Mode" (Tag 0-3) aktiv ist.
             </p>
+            
+            <hr className="my-4" />
+            <div className="space-y-2">
+                <h3 className="font-medium text-sm">Abo-Verwaltung:</h3>
+                <PushManager />
+            </div>
         </CardContent>
       </Card>
     </div>
