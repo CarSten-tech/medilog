@@ -132,4 +132,10 @@
     @apply bg-background text-foreground;
     position: relative; /* Ensure body establishes a stacking context */
   }
+  
+  /* Hardened Scroll Lock (Radix UI) */
+  body[data-scroll-locked] {
+     overflow: hidden !important;
+     overscroll-behavior: none !important;
+  }
 }
