@@ -115,7 +115,7 @@ export default function PushManager() {
       {subscription ? (
           <>
             <Bell className="w-4 h-4" />
-            <span>Aktiv (Klicken zum Deaktivieren)</span>
+            <span>Aktiv (Klicken zum Deaktivieren) v2</span>
           </>
       ) : (
           <>
