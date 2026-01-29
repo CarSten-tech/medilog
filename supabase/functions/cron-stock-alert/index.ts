@@ -1,13 +1,7 @@
 import { createClient } from 'jsr:@supabase/supabase-js@2'
 import webpush from 'npm:web-push'
 
-console.log("🚀 Cron Job started: Smart Check (Privacy Optimized)")
-
-// --- CONFIGURATION ---
-const LOW_STOCK_DAYS = 10       
-const EXPIRY_WARNING_DAYS = 30  
-const CHECKUP_LEAD_TIME_DAYS = 30
-const CHECKUP_SILENCE_DAYS = 25 
+console.log("🚀 Cron Job started: Smart Check (Dynamic Settings)")
 
 // Init Supabase
 const supabase = createClient(
@@ -36,28 +30,29 @@ Deno.serve(async (req: Request) => {
     // ---------------------------------------------------------
     // 1. MEDIKAMENTE PRÜFEN (Via Database RPC)
     // ---------------------------------------------------------
-    // Hinweis: RPC ist sicher, da Logik in der DB läuft
+    // Hinweis: Wir übergeben keine Parameter mehr! 
+    // Die DB nutzt jetzt die individuellen User-Settings (siehe SQL).
     const { data: criticalMeds, error: rpcError } = await supabase
-      .rpc('get_critical_medications', { 
-          stock_threshold: LOW_STOCK_DAYS, 
-          expiry_days: EXPIRY_WARNING_DAYS 
-      })
+      .rpc('get_critical_medications')
 
     if (rpcError) throw rpcError
 
-    // LOGGING: Nur Anzahl loggen, keine Namen (DSGVO)
-    console.log(`✅ RPC fertig: ${criticalMeds?.length || 0} kritische Einträge verarbeitet.`)
+    console.log(`✅ RPC fertig: ${criticalMeds?.length || 0} kritische Einträge (individuell geprüft).`)
 
     if (criticalMeds) {
         for (const med of criticalMeds) {
             const reasons: string[] = []
+            
+            // Wir nutzen die Werte, die der User eingestellt hat (kommen aus der DB zurück)
+            const lowStockLimit = med.user_low_stock_threshold || 10;
+            const expiryLimit = med.user_expiry_threshold || 30;
 
             // Logik: Bestand
             if (med.issue_type === 'stock' || med.issue_type === 'both') {
-                if (med.days_left_stock <= 5) {
+                if (med.days_left_stock <= 3) {
                     reasons.push(`DRINGEND: Reicht nur noch ${med.days_left_stock} Tage!`)
                 } else {
-                    reasons.push(`Bestand niedrig: Reicht noch ${med.days_left_stock} Tage.`)
+                    reasons.push(`Bestand niedrig (< ${lowStockLimit} Tage).`)
                 }
             }
 
@@ -72,7 +67,6 @@ Deno.serve(async (req: Request) => {
             }
 
             if (reasons.length > 0) {
-                // Wir bauen die Nachricht hier zusammen, aber loggen sie NICHT.
                 alertsToSend.push({
                     userId: med.user_id,
                     patientName: med.user_full_name || 'Patient',
@@ -85,16 +79,35 @@ Deno.serve(async (req: Request) => {
     // ---------------------------------------------------------
     // 2. VORSORGE (CHECKUPS) PRÜFEN
     // ---------------------------------------------------------
+    // Wir holen die Checkups UND die Settings des Users dazu
     const { data: checkups, error: checkupError } = await supabase
       .from('recurring_checkups')
       .select(`
         id, title, next_due_date, last_notified_at, user_id, 
         patient_id, 
-        profiles:patient_id (full_name) 
+        profiles:patient_id (full_name)
       `)
       .not('next_due_date', 'is', null)
 
     if (checkupError) console.error("Error checkups:", checkupError)
+
+    // Um DB-Joins zu sparen, holen wir uns kurz alle Settings der betroffenen User
+    // (Das ist performanter als komplexe Joins bei kleinen Mengen)
+    const affectedUserIds = checkups ? [...new Set(checkups.map(c => c.user_id))] : []
+    let userSettingsMap: Record<string, number> = {}
+    
+    if (affectedUserIds.length > 0) {
+        const { data: settingsData } = await supabase
+            .from('profiles')
+            .select('id, settings_checkup_lead_days')
+            .in('id', affectedUserIds)
+        
+        if (settingsData) {
+            settingsData.forEach(p => {
+                userSettingsMap[p.id] = p.settings_checkup_lead_days || 30 // Fallback 30
+            })
+        }
+    }
 
     if (checkups) {
         for (const checkup of checkups) {
@@ -102,13 +115,18 @@ Deno.serve(async (req: Request) => {
              const now = new Date()
              const daysUntilDue = Math.ceil((dueDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
              
-             if (daysUntilDue <= CHECKUP_LEAD_TIME_DAYS) {
+             // HIER: Dynamische Grenze nutzen!
+             const userLeadTime = userSettingsMap[checkup.user_id] || 30
+             const userSilenceTime = Math.max(userLeadTime - 5, 1) // Wartezeit dynamisch anpassen
+
+             if (daysUntilDue <= userLeadTime) {
                  // Spam Schutz
                  let shouldNotify = true
                  if (checkup.last_notified_at) {
                      const lastNotified = new Date(checkup.last_notified_at)
                      const daysSinceNotify = (now.getTime() - lastNotified.getTime()) / (1000 * 60 * 60 * 24)
-                     if (daysSinceNotify < CHECKUP_SILENCE_DAYS) shouldNotify = false
+                     // Wir nerven nicht öfter als alle X Tage (z.B. 25)
+                     if (daysSinceNotify < userSilenceTime) shouldNotify = false
                  }
 
                  if (shouldNotify) {
@@ -132,7 +150,7 @@ Deno.serve(async (req: Request) => {
     }
 
     // ---------------------------------------------------------
-    // 3. SENDEN & GRUPPIEREN
+    // 3. SENDEN & STATISTIK (Privacy Safe)
     // ---------------------------------------------------------
     const groupedByPatient: Record<string, PatientGroup> = {}
     for (const alert of alertsToSend) {
@@ -142,7 +160,6 @@ Deno.serve(async (req: Request) => {
         groupedByPatient[alert.userId].items.push(alert.body)
     }
 
-    // Wir zählen nur Erfolge/Fehler für die Statistik, speichern aber keine IDs
     let sentCount = 0;
     let errorCount = 0;
 
@@ -171,8 +188,6 @@ Deno.serve(async (req: Request) => {
 
     console.log(`✅ Job beendet. Gesendet: ${sentCount}, Fehler: ${errorCount}`)
 
-    // SECURITY: Wir geben keine Details (IDs/Namen) im Response-Body zurück!
-    // Logs von Supabase/Vercel speichern den Body oft, daher hier clean bleiben.
     return new Response(JSON.stringify({ 
         success: true, 
         processed_meds: criticalMeds?.length || 0,
@@ -183,13 +198,12 @@ Deno.serve(async (req: Request) => {
     })
 
   } catch (err) {
-    // SECURITY: Fehler nicht im Detail nach außen geben, wenn möglich
     console.error("Cron Job Failed:", err)
     return new Response(JSON.stringify({ error: 'Internal Server Error' }), { status: 500 })
   }
 })
 
-// --- HILFSFUNKTION: PUSH SENDEN (PARALLELISIERT & SILENT) ---
+// --- HILFSFUNKTION: PUSH SENDEN ---
 async function sendPushToUser(userId: string, title: string, body: string) {
     const vapidPublicKey = Deno.env.get('NEXT_PUBLIC_VAPID_PUBLIC_KEY')
     const vapidPrivateKey = Deno.env.get('VAPID_PRIVATE_KEY')
@@ -202,7 +216,6 @@ async function sendPushToUser(userId: string, title: string, body: string) {
 
     if (!subs || subs.length === 0) return [{ status: 'No Devices' }]
 
-    // Payload erstellen
     const payload = JSON.stringify({
         title,
         body,
@@ -226,21 +239,18 @@ async function sendPushToUser(userId: string, title: string, body: string) {
                 endpoint: sub.endpoint,
                 keys: { p256dh: sub.p256dh, auth: sub.auth }
             }, payload, options)
-            
             return { id: sub.id, status: 'Success' }
         } catch (e: any) {
             if (e.statusCode === 410 || e.statusCode === 404) {
                 await supabase.from('push_subscriptions').delete().eq('id', sub.id)
                 return { id: sub.id, status: 'Deleted (Invalid)' }
             }
-            // Log nur generische Fehlercodes, keine User-IDs
             console.error(`Push Error (Status ${e.statusCode})`)
             return { id: sub.id, status: `Error ${e.statusCode}` }
         }
     })
 
     const results = await Promise.allSettled(pushPromises)
-
     return results.map(res => 
         res.status === 'fulfilled' ? res.value : { status: 'System Error' }
     )

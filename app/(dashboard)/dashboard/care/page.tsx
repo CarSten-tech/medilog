@@ -1,14 +1,15 @@
-import { getMyCaregivers, getPendingInvites } from '@/app/actions/care'
+import { getMyCaregivers, getPendingInvites, getMyPatients } from '@/app/actions/care'
 import CaregiverManager from '@/components/CaregiverManager'
 
 // Diese Seite muss dynamisch sein, damit die Daten immer frisch sind
 export const dynamic = 'force-dynamic';
 
 export default async function CarePage() {
-    // Beides parallel holen
-    const [myCaregivers, pendingInvites] = await Promise.all([
+    // Alle 3 Datenquellen parallel laden
+    const [myCaregivers, pendingInvites, myPatients] = await Promise.all([
         getMyCaregivers(),
-        getPendingInvites()
+        getPendingInvites(),
+        getMyPatients()
     ]);
 
     return (
@@ -17,10 +18,10 @@ export default async function CarePage() {
                 🤝 Care Team
             </h1>
             
-            {/* Hier war der Fehler: Props müssen stimmen! */}
             <CaregiverManager 
                 myCaregivers={myCaregivers} 
-                pendingInvites={pendingInvites} 
+                pendingInvites={pendingInvites}
+                myPatients={myPatients} 
             />
         </div>
     )

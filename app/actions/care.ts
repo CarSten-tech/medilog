@@ -3,7 +3,7 @@
 import { createClient } from '@/utils/supabase/server'
 import { createClient as createAdminClient } from '@supabase/supabase-js'
 import { revalidatePath } from 'next/cache'
-import crypto from 'crypto' // ✨ NEU: Für sichere Token
+import crypto from 'crypto'
 
 // --- RATE LIMIT CONFIG ---
 const RATE_LIMIT_WINDOW_MINUTES = 60;
@@ -62,7 +62,6 @@ export async function inviteCaregiverByEmail(email: string) {
                 })
         }
     } else {
-        // Privacy: Wir verraten nicht, ob der User existiert
         console.log(`Invite an Unbekannt: ${email}`);
     }
 
@@ -71,15 +70,14 @@ export async function inviteCaregiverByEmail(email: string) {
 }
 
 /**
- * 2. Magic Link Erstellen (JETZT SICHER 🔒)
+ * 2. Magic Link Erstellen
  */
 export async function createInviteLink() {
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return { error: 'Nicht eingeloggt' }
 
-    // ✨ FIX: Kryptographisch sicheren Token generieren (64 Zeichen Hex)
-    // Statt Math.random() nutzen wir Node's crypto library
+    // Sicherer Token
     const token = crypto.randomBytes(32).toString('hex');
 
     const { error } = await supabase
@@ -95,8 +93,7 @@ export async function createInviteLink() {
 }
 
 /**
- * 3. Link Details holen (Vorschau)
- * Prüft den Link, OHNE ihn einzulösen.
+ * 3. Link Details holen
  */
 export async function getInviteDetails(token: string) {
     const supabaseAdmin = createAdminClient(
@@ -104,7 +101,6 @@ export async function getInviteDetails(token: string) {
         process.env.SUPABASE_SERVICE_ROLE_KEY!
     )
 
-    // Link suchen
     const { data: link } = await supabaseAdmin
         .from('share_links')
         .select('*')
@@ -115,7 +111,6 @@ export async function getInviteDetails(token: string) {
     if (!link) return { error: 'Dieser Link ist ungültig oder wurde bereits genutzt.' }
     if (new Date(link.expires_at) < new Date()) return { error: 'Dieser Link ist abgelaufen.' }
 
-    // Wer lädt ein?
     const { data: profile } = await supabaseAdmin
         .from('profiles')
         .select('full_name, email')
@@ -130,7 +125,7 @@ export async function getInviteDetails(token: string) {
 }
 
 /**
- * 4. Link Annehmen (Finalisieren)
+ * 4. Link Annehmen
  */
 export async function acceptInviteLink(token: string) {
     const supabase = await createClient()
@@ -154,7 +149,6 @@ export async function acceptInviteLink(token: string) {
 
     if (link.creator_id === user.id) return { error: 'Du kannst dich nicht selbst einladen.' }
     
-    // Beziehung herstellen
     const { error: relError } = await supabaseAdmin
         .from('care_relationships')
         .insert({
@@ -168,7 +162,6 @@ export async function acceptInviteLink(token: string) {
         return { error: 'Fehler beim Verbinden.' }
     }
 
-    // Link entwerten
     await supabaseAdmin
         .from('share_links')
         .update({ status: 'used', used_by: user.id })
@@ -178,7 +171,7 @@ export async function acceptInviteLink(token: string) {
 }
 
 /**
- * 5. GETTER: Meine Betreuer
+ * 5. GETTER: Meine Betreuer (Wer sieht meine Daten?)
  */
 export async function getMyCaregivers() {
     const supabase = await createClient()
@@ -212,7 +205,7 @@ export async function getMyCaregivers() {
 }
 
 /**
- * 6. GETTER: Offene Anfragen
+ * 6. GETTER: Offene Anfragen (Wer will mich betreuen?)
  */
 export async function getPendingInvites() {
     const supabase = await createClient()
@@ -245,7 +238,42 @@ export async function getPendingInvites() {
 }
 
 /**
- * 7. Entfernen
+ * 7. NEU: Wen betreue ICH? (Meine Patienten)
+ */
+export async function getMyPatients() {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return []
+
+    // Suche Beziehungen, wo ICH der Caregiver bin und status = accepted ist
+    const { data: rels } = await supabase
+      .from('care_relationships')
+      .select('*')
+      .eq('caregiver_id', user.id)
+      .eq('status', 'accepted')
+
+    if (!rels || rels.length === 0) return []
+
+    const patientIds = rels.map(r => r.patient_id)
+    const { data: profiles } = await supabase
+      .from('profiles')
+      .select('id, email, full_name')
+      .in('id', patientIds)
+
+    return rels.map(r => {
+        const p = profiles?.find(prof => prof.id === r.patient_id)
+        return {
+            id: r.id,
+            patient_id: r.patient_id,
+            patientName: p?.full_name || 'Unbekannt',
+            patientEmail: p?.email,
+            createdAt: r.created_at
+        }
+    })
+}
+
+/**
+ * 8. Verbindung trennen (Caregiver entfernen)
  */
 export async function removeCaregiver(relationshipId: string) {
     const supabase = await createClient()
@@ -264,7 +292,27 @@ export async function removeCaregiver(relationshipId: string) {
 }
 
 /**
- * 8. Antworten
+ * 9. NEU: Betreuung beenden (Patient entfernen)
+ */
+export async function removePatient(relationshipId: string) {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return { error: 'Nicht authentifiziert' }
+  
+    // Hier prüfen wir, ob ICH der Caregiver bin
+    const { error } = await supabase
+      .from('care_relationships')
+      .delete()
+      .eq('id', relationshipId)
+      .eq('caregiver_id', user.id)
+  
+    if (error) return { error: 'Löschen fehlgeschlagen.' }
+    revalidatePath('/dashboard/care')
+    return { success: true }
+}
+
+/**
+ * 10. Antworten
  */
 export async function respondToInvite(relationshipId: string, accept: boolean) {
     const supabase = await createClient()
