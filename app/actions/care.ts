@@ -3,6 +3,7 @@
 import { createClient } from '@/utils/supabase/server'
 import { createClient as createAdminClient } from '@supabase/supabase-js'
 import { revalidatePath } from 'next/cache'
+import crypto from 'crypto' // ✨ NEU: Für sichere Token
 
 // --- RATE LIMIT CONFIG ---
 const RATE_LIMIT_WINDOW_MINUTES = 60;
@@ -61,6 +62,7 @@ export async function inviteCaregiverByEmail(email: string) {
                 })
         }
     } else {
+        // Privacy: Wir verraten nicht, ob der User existiert
         console.log(`Invite an Unbekannt: ${email}`);
     }
 
@@ -69,14 +71,16 @@ export async function inviteCaregiverByEmail(email: string) {
 }
 
 /**
- * 2. Magic Link Erstellen
+ * 2. Magic Link Erstellen (JETZT SICHER 🔒)
  */
 export async function createInviteLink() {
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return { error: 'Nicht eingeloggt' }
 
-    const token = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+    // ✨ FIX: Kryptographisch sicheren Token generieren (64 Zeichen Hex)
+    // Statt Math.random() nutzen wir Node's crypto library
+    const token = crypto.randomBytes(32).toString('hex');
 
     const { error } = await supabase
         .from('share_links')
@@ -91,7 +95,7 @@ export async function createInviteLink() {
 }
 
 /**
- * 3. NEU: Link Details holen (Vorschau)
+ * 3. Link Details holen (Vorschau)
  * Prüft den Link, OHNE ihn einzulösen.
  */
 export async function getInviteDetails(token: string) {
