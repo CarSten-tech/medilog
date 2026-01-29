@@ -46,8 +46,12 @@ export default function SettingsManager({ initialSettings }: SettingsProps) {
       setLoading(true);
       const res = await updateProfile(fullName);
       setLoading(false);
-      if(res.error) toast.error(res.error);
-      else toast.success("Profil aktualisiert!");
+      if(res.error) {
+          toast.error(res.error);
+      } else {
+          toast.success("Profil aktualisiert!");
+          router.refresh();
+      }
   };
 
   // --- HANDLER: Grenzwerte ---
@@ -55,8 +59,12 @@ export default function SettingsManager({ initialSettings }: SettingsProps) {
       setLoading(true);
       const res = await updateThresholds(lowStock, expiry, checkup);
       setLoading(false);
-      if(res.error) toast.error(res.error);
-      else toast.success("Einstellungen gespeichert!");
+      if(res.error) {
+          toast.error(res.error);
+      } else {
+          toast.success("Einstellungen gespeichert!");
+          router.refresh();
+      }
   };
 
   // --- HANDLER: Account Löschen ---
