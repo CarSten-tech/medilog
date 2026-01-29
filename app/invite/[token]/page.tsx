@@ -6,18 +6,21 @@ import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { CheckCircle2, XCircle } from 'lucide-react'
 
-// Diese Seite ist Server-Side Rendered (SSR)
-export default async function InvitePage({ params }: { params: { token: string } }) {
+// WICHTIG für Next.js 16: params ist ein Promise!
+export default async function InvitePage({ params }: { params: Promise<{ token: string }> }) {
+  
+  // 1. Das Promise auflösen (await params)
+  const { token } = await params
+  
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
-  const { token } = await params
 
-  // Wenn nicht eingeloggt -> Zum Login schicken, aber Token merken!
+  // 2. Wenn nicht eingeloggt -> Zum Login schicken, aber Token merken!
   if (!user) {
     redirect(`/login?next=/invite/${token}`)
   }
 
-  // Wir versuchen direkt, den Invite anzunehmen
+  // 3. Wir versuchen direkt, den Invite anzunehmen
   const result = await acceptInviteLink(token)
 
   return (
