@@ -7,12 +7,13 @@ import { Database } from "@/types/supabase"
 
 export type Checkup = Database['public']['Tables']['recurring_checkups']['Row']
 
+// Update CheckupForm to include notes
 export type CheckupForm = {
     title: string
     frequency_value: number
     frequency_unit: 'months' | 'years'
     last_visit_date?: Date | null
-    patient_id?: string
+    patient_id?: string | null
     notes?: string
 }
 
@@ -21,16 +22,25 @@ function calculateNextDue(lastVisit: Date, value: number, unit: 'months' | 'year
     return addYears(lastVisit, value)
 }
 
-export async function getCheckups(patientId?: string) {
+export async function getCheckups(patientId?: string | null) {
     const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+
+    if (!user) return []
 
     let query = supabase
         .from('recurring_checkups')
         .select('*')
         .order('next_due_date', { ascending: true }) // Urgent first
 
-    if (patientId) {
+    // Logic: 
+    // If patientId is provided AND it is DIFFERENT from my own ID, filter by that patient ID.
+    // If patientId is NOT provided OR it matches my own ID, filter by patient_id IS NULL (Self).
+    
+    if (patientId && patientId !== user.id) {
         query = query.eq('patient_id', patientId)
+    } else {
+        query = query.is('patient_id', null)
     }
 
     const { data, error } = await query

@@ -52,9 +52,10 @@ const formSchema = z.object({
   }),
   frequency_unit: z.enum(["months", "years"]),
   last_visit_date: z.date().optional(),
+  notes: z.string().optional(),
 })
 
-export function CreateCheckupDialog() {
+export function CreateCheckupDialog({ patientId }: { patientId?: string | null }) {
   const [open, setOpen] = useState(false)
   const [isPending, setIsPending] = useState(false)
 
@@ -62,6 +63,7 @@ export function CreateCheckupDialog() {
     resolver: zodResolver(formSchema),
     defaultValues: {
       title: "",
+      notes: "",
       frequency_value: 6,
       frequency_unit: "months",
     },
@@ -70,7 +72,10 @@ export function CreateCheckupDialog() {
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsPending(true)
     try {
-      await createCheckup(values)
+      await createCheckup({
+        ...values,
+        patient_id: patientId
+      })
       toast.success("Vorsorge-Eintrag erstellt")
       setOpen(false)
       form.reset()
@@ -187,6 +192,20 @@ export function CreateCheckupDialog() {
                       />
                     </PopoverContent>
                   </Popover>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="notes"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Notizen (Optional)</FormLabel>
+                  <FormControl>
+                    <Input placeholder="z.B. Nur bei Dr. Müller" {...field} />
+                  </FormControl>
                   <FormMessage />
                 </FormItem>
               )}

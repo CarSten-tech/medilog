@@ -134,7 +134,7 @@ export default async function DashboardPage(props: {
       </div>
 
       <div className="mb-8">
-        <CheckupsWidget checkups={checkups} />
+        <CheckupsWidget checkups={checkups} patientId={targetUserId} />
       </div>
 
       <SortableMedicationGrid medications={processedMedications} />

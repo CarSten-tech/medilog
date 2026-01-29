@@ -100,12 +100,12 @@ function CheckupItem({ checkup }: { checkup: Checkup }) {
     )
 }
 
-export function CheckupsWidget({ checkups }: { checkups: Checkup[] }) {
+export function CheckupsWidget({ checkups, patientId }: { checkups: Checkup[], patientId?: string | null }) {
     return (
         <Card>
             <CardHeader className="flex flex-row items-center justify-between pb-2">
                 <CardTitle className="text-lg font-semibold">Vorsorge & Termine</CardTitle>
-                <CreateCheckupDialog />
+                <CreateCheckupDialog patientId={patientId} />
             </CardHeader>
             <CardContent className="flex flex-col gap-2">
                 {checkups.length === 0 ? (
