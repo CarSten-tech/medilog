@@ -12,6 +12,17 @@ import { CreateCheckupDialog } from "@/components/checkups/create-checkup-dialog
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Calendar } from "@/components/ui/calendar"
 import { toast } from "sonner"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
 
 function CheckupItem({ checkup }: { checkup: Checkup }) {
     const [isPending, setIsPending] = useState(false)
@@ -37,7 +48,6 @@ function CheckupItem({ checkup }: { checkup: Checkup }) {
     }
 
     async function handleDelete() {
-        if (!confirm("Wirklich löschen?")) return
         setIsPending(true)
         try {
             await deleteCheckup(checkup.id)
@@ -92,9 +102,25 @@ function CheckupItem({ checkup }: { checkup: Checkup }) {
                     </PopoverContent>
                 </Popover>
 
-                <Button size="icon" variant="ghost" className="h-8 w-8 text-muted-foreground hover:text-destructive" onClick={handleDelete}>
-                    <Trash2 className="h-4 w-4" />
-                </Button>
+                <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                         <Button size="icon" variant="ghost" className="h-8 w-8 text-muted-foreground hover:text-destructive">
+                            <Trash2 className="h-4 w-4" />
+                        </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                        <AlertDialogHeader>
+                            <AlertDialogTitle>Wirklich löschen?</AlertDialogTitle>
+                            <AlertDialogDescription>
+                                Diese Aktion kann nicht rückgängig gemacht werden. Der Vorsorge-Eintrag wird dauerhaft entfernt.
+                            </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                            <AlertDialogCancel>Abbrechen</AlertDialogCancel>
+                            <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Löschen</AlertDialogAction>
+                        </AlertDialogFooter>
+                    </AlertDialogContent>
+                </AlertDialog>
             </div>
         </div>
     )
