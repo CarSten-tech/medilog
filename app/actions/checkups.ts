@@ -87,6 +87,7 @@ export async function createCheckup(form: CheckupForm) {
 
     revalidatePath('/dashboard')
     revalidatePath('/dashboard/care')
+    revalidatePath('/dashboard/checkups')
     return { success: true }
 }
 
@@ -114,6 +115,7 @@ export async function completeCheckup(id: string, actualDate: Date) {
 
     revalidatePath('/dashboard')
     revalidatePath('/dashboard/care')
+    revalidatePath('/dashboard/checkups')
     return { success: true }
 }
 
@@ -123,5 +125,6 @@ export async function deleteCheckup(id: string) {
     if (error) throw new Error(error.message)
     
     revalidatePath('/dashboard')
+    revalidatePath('/dashboard/checkups')
     return { success: true }
 }
