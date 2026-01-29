@@ -42,9 +42,25 @@ Deno.serve(async (req: Request) => {
     
     if (medError) throw medError
     
+    // 1b. Fetch Recurring Checkups
+    const { data: checkups, error: checkupError } = await supabase
+      .from('recurring_checkups')
+      .select(`
+        id, title, next_due_date, last_notified_at, user_id, 
+        patient_id, 
+        profiles:patient_id (full_name) 
+      `)
+      .not('next_due_date', 'is', null)
+
+    if (checkupError) console.error("Error fetching checkups:", checkupError)
+
+    // ... (Medication logic existing) ...
+
     const alertsToSend = [] 
 
+    // --- PROCESS MEDICATIONS ---
     for (const med of medications) {
+        // ... (existing medication logic) ...
         // --- LOGIC 1: Expiry ---
         let expiryAlert = null
         if (med.expiry_date) {
@@ -93,6 +109,52 @@ Deno.serve(async (req: Request) => {
                 patientName: med.profiles?.full_name || 'Patient',
                 body: `${med.name}: ${reasons.join(' ')}`
             })
+        }
+    }
+
+    // --- PROCESS CHECKUPS ---
+    const CHECKUP_LEAD_TIME_DAYS = 30 // Notify 30 days before
+    const CHECKUP_SILENCE_DAYS = 25  // Don't spam more than once every 25 days
+    
+    if (checkups) {
+        for (const checkup of checkups) {
+             const dueDate = new Date(checkup.next_due_date)
+             const now = new Date()
+             const daysUntilDue = Math.ceil((dueDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
+             
+             // Check if within lead time (e.g. 30 days before OR overdue)
+             if (daysUntilDue <= CHECKUP_LEAD_TIME_DAYS) {
+                 
+                 // Check if recently notified
+                 let shouldNotify = true
+                 if (checkup.last_notified_at) {
+                     const lastNotified = new Date(checkup.last_notified_at)
+                     const daysSinceNotify = (now.getTime() - lastNotified.getTime()) / (1000 * 60 * 60 * 24)
+                     if (daysSinceNotify < CHECKUP_SILENCE_DAYS) {
+                         shouldNotify = false
+                     }
+                 }
+
+                 if (shouldNotify) {
+                     const timeMsg = daysUntilDue < 0 
+                        ? `WAR FÄLLIG am ${dueDate.toLocaleDateString('de-DE')}`
+                        : `fällig am ${dueDate.toLocaleDateString('de-DE')} (in ${daysUntilDue} Tagen)`
+
+                     const patientName = checkup.profiles?.full_name || 'Dir' // 'Dir' if self (patient_id null)
+                     
+                     alertsToSend.push({
+                         userId: checkup.user_id,
+                         patientName: checkup.patient_id ? checkup.profiles?.full_name || 'Patient' : 'Selbst', // Logic handled in grouping below but consistent name needed
+                         body: `Vorsorge "${checkup.title}" ${timeMsg}. Termin vereinbaren!`
+                     })
+
+                     // Update last_notified_at
+                     await supabase
+                        .from('recurring_checkups')
+                        .update({ last_notified_at: new Date().toISOString() })
+                        .eq('id', checkup.id)
+                 }
+             }
         }
     }
 
