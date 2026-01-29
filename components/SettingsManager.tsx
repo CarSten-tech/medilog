@@ -6,7 +6,6 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Slider } from '@/components/ui/slider'; // Falls du Slider hast, sonst Input nutzen
 import { 
     AlertDialog,
     AlertDialogAction,
@@ -20,7 +19,7 @@ import {
 import { updateProfile, updateThresholds, deleteAccount } from '@/app/actions/settings';
 import { toast } from 'sonner';
 import { useRouter } from 'next/navigation';
-import { Loader2, User, Bell, ShieldAlert, Save, Trash2, LogOut } from 'lucide-react';
+import { Loader2, User, Bell, ShieldAlert, Save, Trash2 } from 'lucide-react';
 import PushSubscriptionManager from '@/components/PushSubscriptionManager';
 
 interface SettingsProps {
@@ -70,7 +69,6 @@ export default function SettingsManager({ initialSettings }: SettingsProps) {
           setShowDeleteModal(false);
           toast.error(res.error);
       } else {
-          // Erfolg: Weiterleiten zur Startseite
           toast.success("Account gelöscht. Auf Wiedersehen!");
           router.push('/');
           router.refresh();
@@ -96,13 +94,26 @@ export default function SettingsManager({ initialSettings }: SettingsProps) {
                     </CardHeader>
                     <CardContent className="space-y-4">
                         <div className="space-y-2">
-                            <Label>E-Mail Adresse</Label>
-                            <Input value={initialSettings?.email} disabled className="bg-slate-100 text-slate-500" />
+                            {/* FIX: htmlFor hinzugefügt */}
+                            <Label htmlFor="email-static">E-Mail Adresse</Label>
+                            <Input 
+                                id="email-static" 
+                                value={initialSettings?.email} 
+                                disabled 
+                                className="bg-slate-100 text-slate-500" 
+                                placeholder="deine@email.de"
+                            />
                             <p className="text-xs text-muted-foreground">E-Mail kann nicht geändert werden.</p>
                         </div>
                         <div className="space-y-2">
-                            <Label>Angezeigter Name</Label>
-                            <Input value={fullName} onChange={(e) => setFullName(e.target.value)} placeholder="Max Mustermann" />
+                            {/* FIX: htmlFor und id hinzugefügt */}
+                            <Label htmlFor="full-name">Angezeigter Name</Label>
+                            <Input 
+                                id="full-name"
+                                value={fullName} 
+                                onChange={(e) => setFullName(e.target.value)} 
+                                placeholder="Max Mustermann" 
+                            />
                         </div>
                     </CardContent>
                     <CardFooter className="bg-slate-50/50 flex justify-end">
@@ -139,13 +150,17 @@ export default function SettingsManager({ initialSettings }: SettingsProps) {
                         {/* Regel: Bestand */}
                         <div className="space-y-3">
                             <div className="flex justify-between">
-                                <Label className="font-semibold">Niedriger Bestand</Label>
+                                {/* FIX: htmlFor */}
+                                <Label htmlFor="range-stock" className="font-semibold">Niedriger Bestand</Label>
                                 <span className="text-sm font-mono bg-emerald-100 text-emerald-800 px-2 rounded">ab {lowStock} Tagen</span>
                             </div>
+                            {/* FIX: id und aria-label */}
                             <input 
+                                id="range-stock"
                                 type="range" min="3" max="30" step="1" 
                                 value={lowStock} onChange={(e) => setLowStock(parseInt(e.target.value))}
                                 className="w-full accent-emerald-600 cursor-pointer"
+                                aria-label="Schwellenwert für niedrigen Bestand einstellen"
                             />
                             <p className="text-xs text-muted-foreground">Wenn der Vorrat für weniger als {lowStock} Tage reicht.</p>
                         </div>
@@ -153,13 +168,15 @@ export default function SettingsManager({ initialSettings }: SettingsProps) {
                         {/* Regel: Ablauf */}
                         <div className="space-y-3">
                             <div className="flex justify-between">
-                                <Label className="font-semibold">Ablaufdatum</Label>
+                                <Label htmlFor="range-expiry" className="font-semibold">Ablaufdatum</Label>
                                 <span className="text-sm font-mono bg-amber-100 text-amber-800 px-2 rounded">ab {expiry} Tagen</span>
                             </div>
                             <input 
+                                id="range-expiry"
                                 type="range" min="7" max="90" step="1" 
                                 value={expiry} onChange={(e) => setExpiry(parseInt(e.target.value))}
                                 className="w-full accent-amber-500 cursor-pointer"
+                                aria-label="Warnzeitraum vor Ablaufdatum einstellen"
                             />
                             <p className="text-xs text-muted-foreground">Bevor ein Medikament abläuft.</p>
                         </div>
@@ -167,13 +184,15 @@ export default function SettingsManager({ initialSettings }: SettingsProps) {
                         {/* Regel: Vorsorge */}
                         <div className="space-y-3">
                             <div className="flex justify-between">
-                                <Label className="font-semibold">Vorsorge-Termine</Label>
+                                <Label htmlFor="range-checkup" className="font-semibold">Vorsorge-Termine</Label>
                                 <span className="text-sm font-mono bg-blue-100 text-blue-800 px-2 rounded">ab {checkup} Tagen</span>
                             </div>
                             <input 
+                                id="range-checkup"
                                 type="range" min="7" max="60" step="1" 
                                 value={checkup} onChange={(e) => setCheckup(parseInt(e.target.value))}
                                 className="w-full accent-blue-500 cursor-pointer"
+                                aria-label="Erinnerungszeitraum für Vorsorgetermine einstellen"
                             />
                             <p className="text-xs text-muted-foreground">Erinnerung vor dem Fälligkeitsdatum.</p>
                         </div>
@@ -220,19 +239,4 @@ export default function SettingsManager({ initialSettings }: SettingsProps) {
                 <AlertDialogHeader>
                     <AlertDialogTitle className="text-red-600">Bist du absolut sicher?</AlertDialogTitle>
                     <AlertDialogDescription>
-                        Diese Aktion löscht deinen Account **unwiderruflich**. 
-                        Alle deine Medikamente, Protokolle und Verbindungen zu Betreuern werden sofort entfernt.
-                    </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                    <AlertDialogCancel>Abbrechen</AlertDialogCancel>
-                    <AlertDialogAction onClick={handleDeleteAccount} className="bg-red-600 hover:bg-red-700 text-white">
-                        {loading ? <Loader2 className="animate-spin"/> : 'Ja, Account unwiderruflich löschen'}
-                    </AlertDialogAction>
-                </AlertDialogFooter>
-            </AlertDialogContent>
-        </AlertDialog>
-
-    </div>
-  );
-}
+                        Diese Aktion löscht deinen Account
