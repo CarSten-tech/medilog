@@ -17,30 +17,40 @@ export async function GET(request: Request) {
     // const authHeader = request.headers.get('authorization');
     // if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) { ... }
 
+    console.log("--> API: /api/cron/check-notifications HIT")
+
     // 1. Init Supabase (Service Role essential for fetching all users)
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
     const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
 
+    console.log("--> API: Checking Env Vars...")
     if (!supabaseUrl || !serviceRoleKey) {
+        console.error("--> API: Missing Service Key!")
         return NextResponse.json({ error: "Missing Env Vars (SUPABASE_SERVICE_ROLE_KEY)" }, { status: 500 })
     }
 
+    console.log("--> API: Init Supabase...")
     const supabase = createClient(supabaseUrl, serviceRoleKey)
 
     // 2. Init WebPush
     const vapidPublicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY
     const vapidPrivateKey = process.env.VAPID_PRIVATE_KEY
     const vapidSubject = process.env.VAPID_SUBJECT || 'mailto:admin@medilog.app'
-
+    
+    console.log("--> API: Init WebPush...")
     if (vapidPublicKey && vapidPrivateKey) {
-        webpush.setVapidDetails(vapidSubject, vapidPublicKey, vapidPrivateKey)
+        try {
+            webpush.setVapidDetails(vapidSubject, vapidPublicKey, vapidPrivateKey)
+        } catch(e) { console.error("--> API: WebPush Error", e) }
     }
 
     try {
         const debugLogs: string[] = []
-        const alertsToSend: any[] = []
+        const medicationAlerts: any[] = []
+        const checkupAlerts: any[] = []
 
         // --- FETCH DATA ---
+        console.log("--> API: Fetching Data...")
         const { data: medications, error: medError } = await supabase
             .from('medications')
             .select(`
@@ -48,7 +58,12 @@ export async function GET(request: Request) {
                 profiles (full_name)
             `)
         
-        if (medError) throw medError
+        console.log("--> API: Medications fetched:", medications?.length || 0)
+        
+        if (medError) {
+             console.error("--> API Error Meds:", medError)
+             throw medError
+        }
 
         const { data: checkups, error: checkupError } = await supabase
             .from('recurring_checkups')
@@ -58,6 +73,8 @@ export async function GET(request: Request) {
                 profiles:patient_id (full_name) 
             `)
             .not('next_due_date', 'is', null)
+        
+        console.log("--> API: Checkups fetched:", checkups?.length || 0)
         
         if (checkupError) console.error("Error checkups:", checkupError)
 
@@ -96,7 +113,7 @@ export async function GET(request: Request) {
 
              if (stockAlert || expiryAlert) {
                  const reasons = [stockAlert, expiryAlert].filter(Boolean).join(' ')
-                 alertsToSend.push({
+                 medicationAlerts.push({
                      userId: med.user_id,
                      // @ts-ignore
                      patientName: med.profiles?.full_name || 'Patient',
@@ -134,11 +151,11 @@ export async function GET(request: Request) {
                         ? `WAR FÄLLIG am ${dueDate.toLocaleDateString('de-DE')}`
                         : `fällig am ${dueDate.toLocaleDateString('de-DE')} (in ${daysUntilDue} Tagen)`
 
-                     alertsToSend.push({
+                     checkupAlerts.push({
                          userId: checkup.user_id,
                          // @ts-ignore
                          patientName: checkup.profiles?.full_name || 'Dir',
-                         body: `Vorsorge "${checkup.title}" ${timeMsg}!`
+                         body: `"${checkup.title}" ${timeMsg}!`
                      })
                      
                      // Update DB
@@ -150,35 +167,38 @@ export async function GET(request: Request) {
         // --- SEND ALERTS ---
         const debugResults = []
         
-        // Group by user
-        const groupedByUser: Record<string, string[]> = {}
-        for (const item of alertsToSend) {
-            if (!groupedByUser[item.userId]) groupedByUser[item.userId] = []
-            groupedByUser[item.userId].push(item.body)
-        }
+        // Helper to send batch
+        const sendBatch = async (items: any[], titlePrefix: string) => {
+            const grouped = {} as Record<string, string[]>
+            for (const item of items) {
+                if (!grouped[item.userId]) grouped[item.userId] = []
+                grouped[item.userId].push(item.body)
+            }
 
-        for (const [userId, messages] of Object.entries(groupedByUser)) {
-            const body = messages.join('\n')
-            
-            // Get Subscriptions
-            const { data: subs } = await supabase.from('push_subscriptions').select('*').eq('user_id', userId)
-            
-            if (subs) {
-                for (const sub of subs) {
-                    try {
-                        await webpush.sendNotification({
-                            endpoint: sub.endpoint,
-                            keys: { p256dh: sub.p256dh, auth: sub.auth }
-                        }, JSON.stringify({ title: "MediLog Update", body, icon: '/icon.png' }), {
-                            vapidDetails: { subject: vapidSubject, publicKey: vapidPublicKey!, privateKey: vapidPrivateKey! }
-                        })
-                        debugResults.push({ user: userId, status: 'Sent' })
-                    } catch (e) {
-                        debugResults.push({ user: userId, status: 'Error', error: e })
+            for (const [userId, messages] of Object.entries(grouped)) {
+                const body = messages.join('\n')
+                const { data: subs } = await supabase.from('push_subscriptions').select('*').eq('user_id', userId)
+                
+                if (subs) {
+                    for (const sub of subs) {
+                        try {
+                            await webpush.sendNotification({
+                                endpoint: sub.endpoint,
+                                keys: { p256dh: sub.p256dh, auth: sub.auth }
+                            }, JSON.stringify({ title: titlePrefix, body, icon: '/icon.png' }), {
+                                vapidDetails: { subject: vapidSubject, publicKey: vapidPublicKey!, privateKey: vapidPrivateKey! }
+                            })
+                            debugResults.push({ user: userId, type: titlePrefix, status: 'Sent' })
+                        } catch (e) {
+                            debugResults.push({ user: userId, type: titlePrefix, status: 'Error', error: e })
+                        }
                     }
                 }
             }
         }
+
+        await sendBatch(medicationAlerts, "MediLog: Medikamente")
+        await sendBatch(checkupAlerts, "MediLog: Vorsorge")
 
         return NextResponse.json({ success: true, sent: debugResults.length, logs: debugLogs })
         
