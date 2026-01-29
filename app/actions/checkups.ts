@@ -40,7 +40,8 @@ export async function getCheckups(patientId?: string | null) {
     if (patientId && patientId !== user.id) {
         query = query.eq('patient_id', patientId)
     } else {
-        query = query.is('patient_id', null)
+        // Fetch "Self" checkups: Either explicitly claimed (patient_id = user.id) OR implicit (patient_id is null)
+        query = query.or(`patient_id.is.null,patient_id.eq.${user.id}`)
     }
 
     const { data, error } = await query
