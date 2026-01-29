@@ -3,7 +3,6 @@
 import { createClient } from '@/utils/supabase/server'
 import { createClient as createAdminClient } from '@supabase/supabase-js'
 import { revalidatePath } from 'next/cache'
-import { redirect } from 'next/navigation'
 
 // --- RATE LIMIT CONFIG ---
 const RATE_LIMIT_WINDOW_MINUTES = 60;
@@ -65,8 +64,7 @@ export async function inviteCaregiverByEmail(email: string) {
                 })
         }
     } else {
-        // Optional: Hier könnte man eine echte E-Mail senden ("Komm zu MediLog")
-        // Wir machen silent fail für Privacy.
+        // Silent Fail für Privacy
         console.log(`Invite an Unbekannt: ${email}`);
     }
 
@@ -82,7 +80,7 @@ export async function createInviteLink() {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return { error: 'Nicht eingeloggt' }
 
-    // Token generieren (einfacher Random String)
+    // Token generieren
     const token = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
 
     const { error } = await supabase
@@ -94,8 +92,6 @@ export async function createInviteLink() {
 
     if (error) return { error: 'Konnte Link nicht erstellen.' }
 
-    // Den fertigen Link zurückgeben
-    // HINWEIS: Wir bauen die URL im Frontend zusammen oder hier
     return { success: true, token: token }
 }
 
@@ -106,10 +102,8 @@ export async function acceptInviteLink(token: string) {
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
     
-    // Wenn nicht eingeloggt -> Redirect zum Login (muss vom Client gehandhabt werden)
     if (!user) return { error: 'unauthorized' }
 
-    // Token suchen (Admin Client nötig, da User fremde Links nicht lesen darf)
     const supabaseAdmin = createAdminClient(
         process.env.NEXT_PUBLIC_SUPABASE_URL!,
         process.env.SUPABASE_SERVICE_ROLE_KEY!
@@ -127,8 +121,7 @@ export async function acceptInviteLink(token: string) {
     if (link.creator_id === user.id) return { error: 'Du kannst dich nicht selbst einladen.' }
     if (new Date(link.expires_at) < new Date()) return { error: 'Der Link ist abgelaufen.' }
 
-    // Beziehung herstellen (Patient = Creator, Caregiver = User der klickt)
-    // Wir setzen es direkt auf "accepted", da der Creator den Link ja freiwillig geteilt hat.
+    // Beziehung herstellen
     const { error: relError } = await supabaseAdmin
         .from('care_relationships')
         .insert({
@@ -138,12 +131,11 @@ export async function acceptInviteLink(token: string) {
         })
 
     if (relError) {
-        // Checken ob schon existiert
         if (relError.code === '23505') return { error: 'Ihr seid bereits verbunden!' }
         return { error: 'Fehler beim Verbinden.' }
     }
 
-    // Link als "benutzt" markieren
+    // Link als benutzt markieren
     await supabaseAdmin
         .from('share_links')
         .update({ status: 'used', used_by: user.id })
@@ -152,10 +144,79 @@ export async function acceptInviteLink(token: string) {
     return { success: true }
 }
 
-// ... Restliche Funktionen (removeCaregiver, respondToInvite etc.) bleiben gleich wie vorher ...
-// Kopiere hier deine alten Hilfsfunktionen rein (getMyCaregivers, removeCaregiver, etc.)
-// Ich füge sie der Vollständigkeit halber kurz an:
+/**
+ * 4. GETTER: Meine Betreuer holen (Für die Liste)
+ * -> DAS HATTE GEFEHLT
+ */
+export async function getMyCaregivers() {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return []
+  
+    const { data: rels } = await supabase
+      .from('care_relationships')
+      .select('*')
+      .eq('patient_id', user.id)
+    
+    if (!rels || rels.length === 0) return []
+  
+    const caregiverIds = rels.map(r => r.caregiver_id)
+    
+    const { data: profiles } = await supabase
+      .from('profiles')
+      .select('id, email, full_name')
+      .in('id', caregiverIds)
+      
+    return rels.map(r => {
+        const profile = profiles?.find(p => p.id === r.caregiver_id)
+        return {
+            id: r.id,
+            caregiver_id: r.caregiver_id,
+            status: r.status,
+            email: profile?.email || 'Unbekannt',
+            full_name: profile?.full_name
+        }
+    })
+}
 
+/**
+ * 5. GETTER: Offene Anfragen an MICH (Für das Dashboard Widget)
+ * -> DAS HATTE AUCH GEFEHLT
+ */
+export async function getPendingInvites() {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return []
+  
+    const { data: rels } = await supabase
+      .from('care_relationships')
+      .select('*')
+      .eq('caregiver_id', user.id)
+      .eq('status', 'pending')
+  
+    if (!rels || rels.length === 0) return []
+  
+    // Resolve Patient Names
+    const patientIds = rels.map(r => r.patient_id)
+    const { data: profiles } = await supabase
+      .from('profiles')
+      .select('id, email, full_name')
+      .in('id', patientIds)
+  
+    return rels.map(r => {
+        const p = profiles?.find(prof => prof.id === r.patient_id)
+        return {
+            id: r.id,
+            patientName: p?.full_name || p?.email || 'Unbekannt',
+            patientEmail: p?.email,
+            createdAt: r.created_at
+        }
+    })
+}
+
+/**
+ * 6. Verbindung löschen
+ */
 export async function removeCaregiver(relationshipId: string) {
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
@@ -172,6 +233,9 @@ export async function removeCaregiver(relationshipId: string) {
     return { success: true }
 }
 
+/**
+ * 7. Anfrage beantworten (Accept/Reject)
+ */
 export async function respondToInvite(relationshipId: string, accept: boolean) {
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
