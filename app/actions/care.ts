@@ -18,9 +18,8 @@ export async function inviteCaregiverByEmail(email: string) {
     if (!user) return { error: 'Nicht authentifiziert' }
     if (email === user.email) return { error: 'Du kannst dich nicht selbst einladen.' }
 
-    // --- SCHRITT A: RATE LIMIT CHECK (Die Bremse) ---
+    // Rate Limit Check
     const timeWindow = new Date(Date.now() - RATE_LIMIT_WINDOW_MINUTES * 60 * 1000).toISOString();
-    
     const { count, error: countError } = await supabase
         .from('invite_attempts')
         .select('*', { count: 'exact', head: true })
@@ -33,10 +32,9 @@ export async function inviteCaregiverByEmail(email: string) {
         return { error: `Zu viele Versuche. Bitte warte eine Stunde.` };
     }
 
-    // Versuch loggen
     await supabase.from('invite_attempts').insert({ user_id: user.id });
 
-    // --- SCHRITT B: EIGENTLICHE LOGIK (Die Tarnkappe) ---
+    // User suchen (Admin)
     const supabaseAdmin = createAdminClient(
         process.env.NEXT_PUBLIC_SUPABASE_URL!,
         process.env.SUPABASE_SERVICE_ROLE_KEY!
@@ -46,7 +44,6 @@ export async function inviteCaregiverByEmail(email: string) {
         .rpc('get_user_id_by_email', { email_input: email })
 
     if (targetUserId) {
-        // Prüfen ob schon verbunden
         const { data: existing } = await supabase
             .from('care_relationships')
             .select('id')
@@ -64,7 +61,6 @@ export async function inviteCaregiverByEmail(email: string) {
                 })
         }
     } else {
-        // Silent Fail für Privacy
         console.log(`Invite an Unbekannt: ${email}`);
     }
 
@@ -73,14 +69,13 @@ export async function inviteCaregiverByEmail(email: string) {
 }
 
 /**
- * 2. Magic Link Erstellen (Der Profi-Weg)
+ * 2. Magic Link Erstellen
  */
 export async function createInviteLink() {
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return { error: 'Nicht eingeloggt' }
 
-    // Token generieren
     const token = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
 
     const { error } = await supabase
@@ -96,7 +91,42 @@ export async function createInviteLink() {
 }
 
 /**
- * 3. Link Annehmen (Wenn der Freund klickt)
+ * 3. NEU: Link Details holen (Vorschau)
+ * Prüft den Link, OHNE ihn einzulösen.
+ */
+export async function getInviteDetails(token: string) {
+    const supabaseAdmin = createAdminClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.SUPABASE_SERVICE_ROLE_KEY!
+    )
+
+    // Link suchen
+    const { data: link } = await supabaseAdmin
+        .from('share_links')
+        .select('*')
+        .eq('token', token)
+        .eq('status', 'active')
+        .single()
+
+    if (!link) return { error: 'Dieser Link ist ungültig oder wurde bereits genutzt.' }
+    if (new Date(link.expires_at) < new Date()) return { error: 'Dieser Link ist abgelaufen.' }
+
+    // Wer lädt ein?
+    const { data: profile } = await supabaseAdmin
+        .from('profiles')
+        .select('full_name, email')
+        .eq('id', link.creator_id)
+        .single()
+
+    return { 
+        success: true, 
+        inviterName: profile?.full_name || 'Ein Nutzer',
+        inviterEmail: profile?.email
+    }
+}
+
+/**
+ * 4. Link Annehmen (Finalisieren)
  */
 export async function acceptInviteLink(token: string) {
     const supabase = await createClient()
@@ -119,8 +149,7 @@ export async function acceptInviteLink(token: string) {
     if (error || !link) return { error: 'Dieser Link ist ungültig oder abgelaufen.' }
 
     if (link.creator_id === user.id) return { error: 'Du kannst dich nicht selbst einladen.' }
-    if (new Date(link.expires_at) < new Date()) return { error: 'Der Link ist abgelaufen.' }
-
+    
     // Beziehung herstellen
     const { error: relError } = await supabaseAdmin
         .from('care_relationships')
@@ -135,7 +164,7 @@ export async function acceptInviteLink(token: string) {
         return { error: 'Fehler beim Verbinden.' }
     }
 
-    // Link als benutzt markieren
+    // Link entwerten
     await supabaseAdmin
         .from('share_links')
         .update({ status: 'used', used_by: user.id })
@@ -145,8 +174,7 @@ export async function acceptInviteLink(token: string) {
 }
 
 /**
- * 4. GETTER: Meine Betreuer holen (Für die Liste)
- * -> DAS HATTE GEFEHLT
+ * 5. GETTER: Meine Betreuer
  */
 export async function getMyCaregivers() {
     const supabase = await createClient()
@@ -180,8 +208,7 @@ export async function getMyCaregivers() {
 }
 
 /**
- * 5. GETTER: Offene Anfragen an MICH (Für das Dashboard Widget)
- * -> DAS HATTE AUCH GEFEHLT
+ * 6. GETTER: Offene Anfragen
  */
 export async function getPendingInvites() {
     const supabase = await createClient()
@@ -196,7 +223,6 @@ export async function getPendingInvites() {
   
     if (!rels || rels.length === 0) return []
   
-    // Resolve Patient Names
     const patientIds = rels.map(r => r.patient_id)
     const { data: profiles } = await supabase
       .from('profiles')
@@ -215,7 +241,7 @@ export async function getPendingInvites() {
 }
 
 /**
- * 6. Verbindung löschen
+ * 7. Entfernen
  */
 export async function removeCaregiver(relationshipId: string) {
     const supabase = await createClient()
@@ -234,7 +260,7 @@ export async function removeCaregiver(relationshipId: string) {
 }
 
 /**
- * 7. Anfrage beantworten (Accept/Reject)
+ * 8. Antworten
  */
 export async function respondToInvite(relationshipId: string, accept: boolean) {
     const supabase = await createClient()

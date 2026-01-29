@@ -1,56 +1,61 @@
 import { createClient } from '@/utils/supabase/server'
-import { acceptInviteLink } from '@/app/actions/care'
+import { getInviteDetails } from '@/app/actions/care'
+import InviteConfirmation from '@/components/InviteConfirmation'
+import { Card, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
-import { redirect } from 'next/navigation'
 import Link from 'next/link'
-import { CheckCircle2, XCircle } from 'lucide-react'
+import { redirect } from 'next/navigation'
+import { XCircle, ArrowRight } from 'lucide-react'
 
-// WICHTIG für Next.js 16: params ist ein Promise!
+// WICHTIG: params ist ein Promise in Next.js 16!
 export default async function InvitePage({ params }: { params: Promise<{ token: string }> }) {
-  
-  // 1. Das Promise auflösen (await params)
   const { token } = await params
   
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
 
-  // 2. Wenn nicht eingeloggt -> Zum Login schicken, aber Token merken!
+  // 1. Wenn nicht eingeloggt -> Redirect zum Login (Link merken)
   if (!user) {
     redirect(`/login?next=/invite/${token}`)
   }
 
-  // 3. Wir versuchen direkt, den Invite anzunehmen
-  const result = await acceptInviteLink(token)
+  // 2. Daten laden (Link prüfen, aber noch NICHT einlösen!)
+  const details = await getInviteDetails(token)
 
-  return (
-    <div className="min-h-screen flex items-center justify-center bg-slate-50 p-4">
-      <Card className="max-w-md w-full text-center">
-        <CardHeader>
-          <div className="mx-auto mb-4 bg-white p-3 rounded-full shadow-sm w-fit">
-             {result.success ? (
-                 <CheckCircle2 className="w-12 h-12 text-emerald-500" />
-             ) : (
+  // 3. Fehler-Fall (Link kaputt/abgelaufen)
+  if (details.error) {
+      return (
+        <div className="min-h-screen flex items-center justify-center bg-slate-50 p-4">
+          <Card className="max-w-md w-full text-center shadow-lg border-red-100">
+            <CardHeader>
+              <div className="mx-auto mb-4 bg-red-50 p-3 rounded-full w-fit">
                  <XCircle className="w-12 h-12 text-red-500" />
-             )}
-          </div>
-          <CardTitle>
-            {result.success ? 'Verbindung hergestellt!' : 'Das hat leider nicht geklappt'}
-          </CardTitle>
-          <CardDescription>
-            {result.success 
-              ? 'Du bist jetzt als Betreuer eingetragen.' 
-              : result.error || 'Der Link ist ungültig oder abgelaufen.'}
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Button asChild className="w-full" variant={result.success ? "default" : "secondary"}>
-            <Link href="/dashboard/care">
-              Zum Dashboard
-            </Link>
-          </Button>
-        </CardContent>
-      </Card>
+              </div>
+              <CardTitle className="text-red-900">Ungültiger Link</CardTitle>
+              <CardDescription className="text-red-700/80">
+                {details.error}
+              </CardDescription>
+            </CardHeader>
+            <CardFooter>
+              <Button asChild className="w-full" variant="outline">
+                <Link href="/dashboard">
+                  Zum Dashboard <ArrowRight className="ml-2 w-4 h-4" />
+                </Link>
+              </Button>
+            </CardFooter>
+          </Card>
+        </div>
+      )
+  }
+
+  // 4. Erfolgs-Fall: Wir zeigen die Entscheidungs-Box
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-slate-50 p-4 bg-[url('/grid.svg')]">
+        <InviteConfirmation 
+            token={token} 
+            inviterName={details.inviterName!} 
+            inviterEmail={details.inviterEmail!} 
+        />
     </div>
   )
 }
