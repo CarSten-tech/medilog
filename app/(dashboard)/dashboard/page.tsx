@@ -1,5 +1,11 @@
+import { createClient } from '@/utils/supabase/server'
 import { getCheckups } from '@/app/actions/checkups'
 import { CheckupsWidget } from "@/components/dashboard/checkups-widget"
+import { SortableMedicationGrid } from "@/components/dashboard/sortable-medication-grid"
+import type { MedicationStatus } from "@/components/dashboard/medication-card"
+import { WeeklyRefillButton } from "@/components/dashboard/weekly-refill-button"
+import { getPendingInvites } from '@/app/actions/care'
+import { InviteAlert } from '@/components/dashboard/invite-alert'
 
 export default async function DashboardPage(props: {
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>
