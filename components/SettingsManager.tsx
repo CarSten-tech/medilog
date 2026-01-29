@@ -94,7 +94,6 @@ export default function SettingsManager({ initialSettings }: SettingsProps) {
                     </CardHeader>
                     <CardContent className="space-y-4">
                         <div className="space-y-2">
-                            {/* FIX: htmlFor hinzugefügt */}
                             <Label htmlFor="email-static">E-Mail Adresse</Label>
                             <Input 
                                 id="email-static" 
@@ -106,7 +105,6 @@ export default function SettingsManager({ initialSettings }: SettingsProps) {
                             <p className="text-xs text-muted-foreground">E-Mail kann nicht geändert werden.</p>
                         </div>
                         <div className="space-y-2">
-                            {/* FIX: htmlFor und id hinzugefügt */}
                             <Label htmlFor="full-name">Angezeigter Name</Label>
                             <Input 
                                 id="full-name"
@@ -150,11 +148,9 @@ export default function SettingsManager({ initialSettings }: SettingsProps) {
                         {/* Regel: Bestand */}
                         <div className="space-y-3">
                             <div className="flex justify-between">
-                                {/* FIX: htmlFor */}
                                 <Label htmlFor="range-stock" className="font-semibold">Niedriger Bestand</Label>
                                 <span className="text-sm font-mono bg-emerald-100 text-emerald-800 px-2 rounded">ab {lowStock} Tagen</span>
                             </div>
-                            {/* FIX: id und aria-label */}
                             <input 
                                 id="range-stock"
                                 type="range" min="3" max="30" step="1" 
@@ -239,4 +235,19 @@ export default function SettingsManager({ initialSettings }: SettingsProps) {
                 <AlertDialogHeader>
                     <AlertDialogTitle className="text-red-600">Bist du absolut sicher?</AlertDialogTitle>
                     <AlertDialogDescription>
-                        Diese Aktion löscht deinen Account
+                        Diese Aktion löscht deinen Account **unwiderruflich**. 
+                        Alle deine Medikamente, Protokolle und Verbindungen zu Betreuern werden sofort entfernt.
+                    </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                    <AlertDialogCancel>Abbrechen</AlertDialogCancel>
+                    <AlertDialogAction onClick={handleDeleteAccount} className="bg-red-600 hover:bg-red-700 text-white">
+                        {loading ? <Loader2 className="animate-spin"/> : 'Ja, Account unwiderruflich löschen'}
+                    </AlertDialogAction>
+                </AlertDialogFooter>
+            </AlertDialogContent>
+        </AlertDialog>
+
+    </div>
+  );
+}
