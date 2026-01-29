@@ -198,6 +198,12 @@ export async function GET(request: Request) {
         }
 
         await sendBatch(medicationAlerts, "MediLog: Medikamente")
+        
+        // Prevent OS/Browser throttling by adding a small delay
+        if (checkupAlerts.length > 0 && medicationAlerts.length > 0) {
+             await new Promise(r => setTimeout(r, 1000))
+        }
+
         await sendBatch(checkupAlerts, "MediLog: Vorsorge")
 
         return NextResponse.json({ success: true, sent: debugResults.length, logs: debugLogs })
