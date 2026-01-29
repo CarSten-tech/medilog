@@ -9,7 +9,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Button } from "@/components/ui/button"
-import { Menu, LogOut, Users, Bug } from "lucide-react"
+import { Menu, LogOut, Users, Bug, Calendar } from "lucide-react"
 import { signOut } from "@/app/login/actions"
 import Link from "next/link"
 
@@ -44,6 +44,13 @@ export function UserMenu({ email }: UserMenuProps) {
             </Link>
         </DropdownMenuItem>
 
+        <DropdownMenuItem asChild>
+            <Link href="/dashboard/checkups" className="cursor-pointer w-full flex items-center">
+                <Calendar className="mr-2 h-4 w-4" />
+                <span>Vorsorge</span>
+            </Link>
+        </DropdownMenuItem>
+        
         <DropdownMenuSeparator />
         
 

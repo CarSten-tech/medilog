@@ -1,6 +1,6 @@
 'use client'
 
-import { Pill, LogOut, Users } from "lucide-react"
+import { Pill, LogOut, Users, Calendar } from "lucide-react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { signOut } from "@/app/login/actions"
@@ -42,6 +42,13 @@ export function Navbar({ user, patients = [] }: NavbarProps) {
                     <Button variant="ghost" size="sm" className="flex text-slate-500 hover:text-slate-900 cursor-pointer">
                         <Users className="h-5 w-5 mr-2" />
                         <span className="hidden lg:inline">Team</span>
+                    </Button>
+                </Link>
+
+                <Link href="/dashboard/checkups" title="Vorsorge & Termine">
+                    <Button variant="ghost" size="sm" className="flex text-slate-500 hover:text-slate-900 cursor-pointer">
+                        <Calendar className="h-5 w-5 mr-2" />
+                        <span className="hidden lg:inline">Vorsorge</span>
                     </Button>
                 </Link>
 

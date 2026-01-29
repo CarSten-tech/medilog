@@ -1,6 +1,4 @@
 import { createClient } from '@/utils/supabase/server'
-import { getCheckups } from '@/app/actions/checkups'
-import { CheckupsWidget } from "@/components/dashboard/checkups-widget"
 import { SortableMedicationGrid } from "@/components/dashboard/sortable-medication-grid"
 import type { MedicationStatus } from "@/components/dashboard/medication-card"
 import { WeeklyRefillButton } from "@/components/dashboard/weekly-refill-button"
@@ -45,24 +43,17 @@ export default async function DashboardPage(props: {
     day: 'numeric'
   })
 
-  // Fetch data in parallel
-  const [
-    { data: medications, error },
-    checkups
-  ] = await Promise.all([
-    supabase
+  // Fetch medications
+  const { data: medications, error } = await supabase
       .from('medications')
       .select('*')
       .eq('user_id', targetUserId)
-      .order('display_order', { ascending: true }),
-    getCheckups(targetUserId)
-  ])
+      .order('display_order', { ascending: true })
 
   if (error) {
     console.error("Error fetching medications:", error)
   }
 
-  // Calculate calculated fields for each medication
   // Calculate calculated fields for each medication
   const processedMedications = (medications || []).map((med) => {
     const dailyDosage = med.daily_dosage || 1;
@@ -131,10 +122,6 @@ export default async function DashboardPage(props: {
            <p className="text-slate-500 font-medium">{today}</p>
         </div>
         <WeeklyRefillButton />
-      </div>
-
-      <div className="mb-8">
-        <CheckupsWidget checkups={checkups} patientId={targetUserId} />
       </div>
 
       <SortableMedicationGrid medications={processedMedications} />
