@@ -1,25 +1,21 @@
 "use server"
 
+import { headers } from "next/headers"
+
 export async function triggerStockCheck() {
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-    const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+    // Determine base URL dynamically
+    const headerList = await headers()
+    const host = headerList.get("host") || "localhost:3000"
+    const protocol = host.includes("localhost") ? "http" : "https"
     
-    // Hardcoded project ref if env var is missing/generic, but cleaner to use env
-    // Based on previous deployment logs, function URL is:
-    // https://uzuqtycrrwsetbnigrfo.supabase.co/functions/v1/cron-stock-alert
-    
-    // We can construct it dynamically:
-    const functionUrl = `${supabaseUrl}/functions/v1/cron-stock-alert`
+    const functionUrl = `${protocol}://${host}/api/cron/check-notifications`
 
     console.log("Triggering Cron at:", functionUrl)
 
     try {
         const response = await fetch(functionUrl, {
-            method: 'POST',
-            headers: {
-                'Authorization': `Bearer ${serviceRoleKey}`,
-                'Content-Type': 'application/json',
-            },
+            method: 'GET', // Vercel Cron uses GET by default
+            cache: 'no-store'
         })
 
         if (!response.ok) {
