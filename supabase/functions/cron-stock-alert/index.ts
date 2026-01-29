@@ -1,7 +1,7 @@
 import { createClient } from 'jsr:@supabase/supabase-js@2'
 import webpush from 'npm:web-push'
 
-console.log("🚀 Cron Job started: Smart Check (RPC)")
+console.log("🚀 Cron Job started: Smart Check (RPC + Parallel Push)")
 
 // --- CONFIGURATION ---
 const LOW_STOCK_DAYS = 10       
@@ -184,36 +184,65 @@ Deno.serve(async (req: Request) => {
   }
 })
 
-// --- HELPER FUNCTION ---
+// --- HILFSFUNKTION: PUSH SENDEN (PARALLELISIERT) ---
 async function sendPushToUser(userId: string, title: string, body: string) {
     const vapidPublicKey = Deno.env.get('NEXT_PUBLIC_VAPID_PUBLIC_KEY')
     const vapidPrivateKey = Deno.env.get('VAPID_PRIVATE_KEY')
     const vapidSubject = Deno.env.get('VAPID_SUBJECT') || 'mailto:admin@medilog.app'
 
-    const { data: subs } = await supabase.from('push_subscriptions').select('*').eq('user_id', userId)
+    // 1. Alle Abos des Users holen
+    const { data: subs } = await supabase
+        .from('push_subscriptions')
+        .select('*')
+        .eq('user_id', userId)
+
     if (!subs || subs.length === 0) return [{ status: 'No Devices' }]
 
-    const payload = JSON.stringify({ title, body, icon: '/icon.png', url: '/dashboard' })
-    const statuses = []
+    // Payload vorbereiten
+    const payload = JSON.stringify({
+        title,
+        body,
+        icon: '/icon.png',
+        url: '/dashboard'
+    })
 
-    for (const sub of subs) {
+    const options = {
+        TTL: 86400, // 24 Stunden gültig
+        urgency: 'high',
+        vapidDetails: {
+            subject: vapidSubject!,
+            publicKey: vapidPublicKey!,
+            privateKey: vapidPrivateKey!
+        }
+    }
+
+    // 2. PARALLEL SENDEN: Wir erstellen für jedes Abo ein "Promise" (Aufgabe)
+    const pushPromises = subs.map(async (sub) => {
         try {
             await webpush.sendNotification({
                 endpoint: sub.endpoint,
                 keys: { p256dh: sub.p256dh, auth: sub.auth }
-            }, payload, {
-                TTL: 86400, urgency: 'high',
-                vapidDetails: { subject: vapidSubject!, publicKey: vapidPublicKey!, privateKey: vapidPrivateKey! }
-            })
-            statuses.push({ id: sub.id, status: 'Success' })
+            }, payload, options)
+            
+            return { id: sub.id, status: 'Success' }
         } catch (e: any) {
-             if (e.statusCode === 410 || e.statusCode === 404) {
-                 await supabase.from('push_subscriptions').delete().eq('id', sub.id)
-                 statuses.push({ id: sub.id, status: 'Deleted (Invalid)' })
-             } else {
-                 statuses.push({ id: sub.id, status: 'Error' })
-             }
+            // Fehlerbehandlung pro Gerät
+            // 410 (Gone) oder 404 (Not Found) -> Abo ist tot, weg damit!
+            if (e.statusCode === 410 || e.statusCode === 404) {
+                await supabase.from('push_subscriptions').delete().eq('id', sub.id)
+                return { id: sub.id, status: 'Deleted (Invalid)' }
+            }
+            console.error(`Push Error Device ${sub.id.slice(0,4)}:`, e.statusCode)
+            return { id: sub.id, status: `Error ${e.statusCode}` }
         }
-    }
-    return statuses
+    })
+
+    // 3. Warten, bis ALLE fertig sind (egal ob Erfolg oder Fehler)
+    // Das ist viel schneller als eine for-Schleife!
+    const results = await Promise.allSettled(pushPromises)
+
+    // Ergebnisse schön formatieren
+    return results.map(res => 
+        res.status === 'fulfilled' ? res.value : { status: 'System Error' }
+    )
 }
