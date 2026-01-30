@@ -1,6 +1,7 @@
 'use server';
 
 import { createClient } from '@/utils/supabase/server';
+import { createClient as createAdminClient } from '@supabase/supabase-js';
 import { revalidatePath } from 'next/cache';
 
 // --- Update Profile (Full Name) ---
@@ -56,7 +57,7 @@ export async function deleteAccount() {
 
     if (!user) return { error: "Nicht authentifiziert" };
 
-    const supabaseAdmin = createClient(
+    const supabaseAdmin = createAdminClient(
         process.env.NEXT_PUBLIC_SUPABASE_URL!,
         process.env.SUPABASE_SERVICE_ROLE_KEY!
     );
