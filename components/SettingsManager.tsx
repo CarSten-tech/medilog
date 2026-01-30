@@ -173,13 +173,13 @@ export default function SettingsManager({ initialSettings }: SettingsProps) {
                         <div className="space-y-3">
                             <div className="flex justify-between">
                                 <Label htmlFor="range-expiry" className="font-semibold">Ablaufdatum</Label>
-                                <span className="text-sm font-mono bg-amber-100 text-amber-800 px-2 rounded">ab {expiry} Tagen</span>
+                                <span className="text-sm font-mono bg-orange-100 text-orange-800 px-2 rounded">ab {expiry} Tagen</span>
                             </div>
                             <input 
                                 id="range-expiry"
                                 type="range" min="7" max="90" step="1" 
                                 value={expiry} onChange={(e) => setExpiry(parseInt(e.target.value))}
-                                className="w-full accent-amber-500 cursor-pointer"
+                                className="w-full accent-orange-500 cursor-pointer"
                                 aria-label="Warnzeitraum vor Ablaufdatum einstellen"
                             />
                             <p className="text-xs text-muted-foreground">Bevor ein Medikament abläuft.</p>
