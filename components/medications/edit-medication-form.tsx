@@ -100,6 +100,16 @@ export function EditMedicationForm({ medicationId, initialData, onSuccess }: Edi
           finalData.daily_dosage = data.daily_dosage / 7
       }
 
+      // Timezone Fix: Adjust date to ensure it stays on the selected day
+      if (finalData.expiry_date) {
+          const d = new Date(finalData.expiry_date)
+          // Subtract offset because getTimezoneOffset returns (UTC - Local) in minutes
+          // e.g. UTC+1 -> -60.  Time - (-60) = Time + 60.
+          // 00:00 Local (23:00 UTC) + 1h = 00:00 UTC.
+          const adjustedDate = new Date(d.getTime() - d.getTimezoneOffset() * 60000)
+          finalData.expiry_date = adjustedDate
+      }
+
       // Check for duplicates only if name changed
       if (data.name !== initialData.name) {
         const exists = await checkMedicationName(finalData.name, medicationId)
